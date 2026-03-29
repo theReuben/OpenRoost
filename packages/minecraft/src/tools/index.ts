@@ -15,12 +15,21 @@ import { registerAttackEntity } from "./attackEntity.js";
 import { registerDefend } from "./defend.js";
 import { registerEquipArmor } from "./equipArmor.js";
 import { registerUseItem } from "./useItem.js";
+import { registerFollowPlayer } from "./followPlayer.js";
+import { registerWhisper } from "./whisper.js";
+import { registerGetPlayerInfo } from "./getPlayerInfo.js";
+import { registerInteractBlock } from "./interactBlock.js";
+import { registerTransferItems } from "./transferItems.js";
+import { registerSmeltItem } from "./smeltItem.js";
+import { registerCancelTask } from "./cancelTask.js";
+import { registerStopMovement } from "./stopMovement.js";
+import { registerLookAt } from "./lookAt.js";
 
 /**
  * Register all MCP tools on the server.
  */
 export function registerAllTools(server: McpServer, bot: BotManager): void {
-  // Phase 1
+  // Phase 1 — Perception & basic actions
   registerGetObservation(server, bot);
   registerCheckInventory(server, bot);
   registerGoTo(server, bot);
@@ -29,15 +38,30 @@ export function registerAllTools(server: McpServer, bot: BotManager): void {
   registerGetEvents(server, bot);
   registerGetTaskStatus(server, bot);
 
-  // Phase 2
+  // Phase 2 — Crafting & building
   registerScanArea(server, bot);
   registerGetRecipe(server, bot);
   registerCraftItem(server, bot);
   registerPlaceBlock(server, bot);
+  registerLookAt(server, bot);
 
-  // Phase 3
+  // Phase 3 — Combat
   registerAttackEntity(server, bot);
   registerDefend(server, bot);
   registerEquipArmor(server, bot);
   registerUseItem(server, bot);
+
+  // Phase 4 — Multiplayer
+  registerFollowPlayer(server, bot);
+  registerWhisper(server, bot);
+  registerGetPlayerInfo(server, bot);
+
+  // Phase 5 — Storage & smelting
+  registerInteractBlock(server, bot);
+  registerTransferItems(server, bot);
+  registerSmeltItem(server, bot);
+
+  // Phase 6 — Task management
+  registerCancelTask(server, bot);
+  registerStopMovement(server, bot);
 }
