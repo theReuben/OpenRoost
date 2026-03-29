@@ -353,14 +353,40 @@ describe("Phase 6 — Task Management Tools", () => {
   });
 
   describe("look_at", () => {
-    it("looks at a cardinal direction", async () => {
+    it("looks at a cardinal direction and returns structured view", async () => {
       registerLookAt(server as any, bot);
       const handler = server.getHandler("look_at");
       const result = await handler({ target: "north" });
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.result.description).toContain("north");
-      expect(parsed.result.blocks).toBeDefined();
+      expect(parsed.result.layers).toBeDefined();
+      expect(parsed.result.layers).toHaveLength(3); // near, mid, far
+      expect(parsed.result.visibleBlocks).toBeDefined();
+      expect(parsed.result.visibleEntities).toBeDefined();
       expect(bot.bot.lookAt).toHaveBeenCalled();
+    });
+
+    it("returns ray-cast hit for directly ahead block", async () => {
+      // blockAt returns stone for all positions, so ray-cast should hit
+      bot.bot.blockAt = vi.fn(() => ({ name: "stone" }));
+      registerLookAt(server as any, bot);
+      const handler = server.getHandler("look_at");
+      const result = await handler({ target: "north" });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.result.lookingAt).toBeDefined();
+      expect(parsed.result.lookingAt.block).toBe("stone");
+      expect(parsed.result.lookingAt.distance).toBeGreaterThan(0);
+      expect(parsed.result.description).toContain("Directly ahead: stone");
+    });
+
+    it("returns null ray-cast when looking into open air", async () => {
+      bot.bot.blockAt = vi.fn(() => ({ name: "air" }));
+      registerLookAt(server as any, bot);
+      const handler = server.getHandler("look_at");
+      const result = await handler({ target: "up" });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.result.lookingAt).toBeNull();
+      expect(parsed.result.description).toContain("clear view");
     });
 
     it("looks at a specific position", async () => {
@@ -369,7 +395,41 @@ describe("Phase 6 — Task Management Tools", () => {
       const result = await handler({ target: { x: 100, y: 64, z: 200 } });
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.result.description).toContain("100");
+      expect(parsed.result.layers).toHaveLength(3);
       expect(bot.bot.lookAt).toHaveBeenCalled();
+    });
+
+    it("filters entities by view cone direction", async () => {
+      // Add an entity directly north of the bot
+      bot.bot.entities = {
+        0: bot.bot.entity,
+        1: {
+          name: "zombie",
+          type: "mob",
+          position: {
+            x: 10, y: 64, z: 15, // north = negative z, but this is +z = south
+            distanceTo: vi.fn(() => 5),
+          },
+        },
+        2: {
+          name: "skeleton",
+          type: "mob",
+          position: {
+            x: 10, y: 64, z: -30, // far north
+            distanceTo: vi.fn(() => 50),
+          },
+        },
+      };
+
+      registerLookAt(server as any, bot);
+      const handler = server.getHandler("look_at");
+      const result = await handler({ target: "south" }); // looking south
+      const parsed = JSON.parse(result.content[0].text);
+
+      // The zombie at z=15 (south) should be visible looking south
+      // The skeleton at z=-30 (north) should NOT be visible looking south
+      const visibleNames = parsed.result.visibleEntities.map((e: any) => e.name);
+      expect(visibleNames).not.toContain("skeleton");
     });
   });
 });
