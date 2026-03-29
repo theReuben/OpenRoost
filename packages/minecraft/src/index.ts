@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { BotManager } from "./BotManager.js";
 import { registerAllTools } from "./tools/index.js";
 import { registerResources, wireResourceNotifications } from "./resources.js";
+import { registerPrompts } from "./prompts.js";
 
 const MC_HOST = process.env.MC_HOST ?? "localhost";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
@@ -22,9 +23,10 @@ async function main(): Promise<void> {
     version: MC_VERSION,
   });
 
-  // Register all tools and resources
+  // Register all tools, resources, and prompts
   registerAllTools(server, bot);
   registerResources(server, bot);
+  registerPrompts(server);
 
   // Connect to Minecraft
   console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
