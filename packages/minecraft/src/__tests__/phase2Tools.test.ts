@@ -128,6 +128,8 @@ function createMockBot() {
       },
     },
     isConnected: true,
+    // Visibility: all blocks are treated as exposed in tests
+    isBlockExposed: vi.fn(() => true),
   } as any;
 }
 

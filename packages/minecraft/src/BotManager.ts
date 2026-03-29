@@ -169,6 +169,35 @@ export class BotManager {
     }
   }
 
+  /**
+   * Check if a block has at least one face exposed to air/transparent block
+   * (i.e., visible to a player without x-ray). A block fully surrounded by
+   * solid opaque blocks would not be visible.
+   */
+  isBlockExposed(x: number, y: number, z: number): boolean {
+    const offsets = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+    const center = this.bot.entity.position;
+    for (const [ox, oy, oz] of offsets) {
+      try {
+        const neighbor = this.bot.blockAt(
+          center.offset(x - center.x + ox, y - center.y + oy, z - center.z + oz)
+        );
+        if (
+          !neighbor ||
+          neighbor.name === "air" ||
+          neighbor.name === "cave_air" ||
+          neighbor.name === "void_air" ||
+          neighbor.transparent
+        ) {
+          return true;
+        }
+      } catch {
+        return true; // unloaded chunk = treat as exposed
+      }
+    }
+    return false;
+  }
+
   getNearbyBlocks(radius: number): BlockInfo[] {
     const bot = this.bot;
     const center = bot.entity.position;
@@ -180,10 +209,13 @@ export class BotManager {
           const pos = center.offset(dx, dy, dz);
           const block = bot.blockAt(pos);
           if (block && block.name !== "air" && block.name !== "cave_air") {
-            blocks.push({
-              name: block.name,
-              position: { x: Math.floor(pos.x), y: Math.floor(pos.y), z: Math.floor(pos.z) },
-            });
+            // Only include blocks a player could actually see
+            const bx = Math.floor(pos.x);
+            const by = Math.floor(pos.y);
+            const bz = Math.floor(pos.z);
+            if (this.isBlockExposed(bx, by, bz)) {
+              blocks.push({ name: block.name, position: { x: bx, y: by, z: bz } });
+            }
           }
         }
       }
@@ -210,6 +242,9 @@ export class BotManager {
         type = "animal";
       }
 
+      // Health is only visible to a player within close range (~6 blocks)
+      const canSeeHealth = dist <= 6;
+
       entities.push({
         name: entity.name ?? entity.type ?? "unknown",
         type,
@@ -218,7 +253,7 @@ export class BotManager {
           y: Math.floor(entity.position.y),
           z: Math.floor(entity.position.z),
         },
-        health: (entity as any).health ?? undefined,
+        health: canSeeHealth ? ((entity as any).health ?? undefined) : undefined,
         distance: Math.round(dist * 10) / 10,
       });
     }

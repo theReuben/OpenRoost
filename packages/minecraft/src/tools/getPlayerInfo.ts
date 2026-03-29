@@ -30,15 +30,17 @@ export function registerGetPlayerInfo(server: McpServer, bot: BotManager): void 
 
         if (player.entity) {
           const pos = player.entity.position;
+          const dist = pos.distanceTo(bot.bot.entity.position);
           result.position = {
             x: Math.floor(pos.x),
             y: Math.floor(pos.y),
             z: Math.floor(pos.z),
           };
-          result.distance = Math.round(
-            pos.distanceTo(bot.bot.entity.position) * 10
-          ) / 10;
-          result.health = (player.entity as any).health ?? undefined;
+          result.distance = Math.round(dist * 10) / 10;
+          // Player health is only visible at close range
+          if (dist <= 6) {
+            result.health = (player.entity as any).health ?? undefined;
+          }
         }
 
         const wrapped = wrapResponse(result, bot.events);
