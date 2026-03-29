@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { BotManager } from "./BotManager.js";
 import { registerAllTools } from "./tools/index.js";
+import { registerResources, wireResourceNotifications } from "./resources.js";
 
 const MC_HOST = process.env.MC_HOST ?? "localhost";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
@@ -21,8 +22,9 @@ async function main(): Promise<void> {
     version: MC_VERSION,
   });
 
-  // Register all Phase 1 tools
+  // Register all tools and resources
   registerAllTools(server, bot);
+  registerResources(server, bot);
 
   // Connect to Minecraft
   console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
@@ -35,6 +37,9 @@ async function main(): Promise<void> {
     );
     process.exit(1);
   }
+
+  // Wire up resource update notifications now that bot is connected
+  wireResourceNotifications(server, bot);
 
   // Start MCP transport
   const transport = new StdioServerTransport();
