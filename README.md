@@ -1,6 +1,15 @@
 # OpenRoost
 
-MCP servers enabling Claude to play videogames as a cooperative AI player.
+MCP servers enabling Claude to play videogames as a cooperative AI player. Starting with Minecraft Java Edition, with a game-agnostic core designed for expansion.
+
+## Prerequisites
+
+- **Node.js** 18+ (LTS recommended)
+- **Minecraft Java Edition server** — any of:
+  - Vanilla server ([download](https://www.minecraft.net/en-us/download/server))
+  - [Paper](https://papermc.io/) or [Spigot](https://www.spigotmc.org/)
+  - A Minecraft hosting provider
+- Server version **1.8 – 1.20.4** (Mineflayer compatibility)
 
 ## Architecture
 
@@ -10,30 +19,64 @@ packages/
 └── minecraft/   → @openroost/minecraft — Mineflayer bot + 22 MCP tools
 ```
 
-## Quick Start
+## Getting Started
+
+### 1. Clone and build
 
 ```bash
-# Install all dependencies
+git clone https://github.com/theReuben/OpenRoost.git
+cd OpenRoost
 npm install
-
-# Build everything (core first, then game packages)
 npm run build
-
-# Run tests
-npm test
-
-# Run the Minecraft server
-MC_HOST=localhost MC_PORT=25565 MC_USERNAME=ClaudeBot npm start -w packages/minecraft
 ```
 
-## Claude Desktop Configuration
+### 2. Set up a Minecraft server
+
+If you don't already have one running, here's the quickest way:
+
+```bash
+# Download the vanilla server jar (example for 1.20.4)
+mkdir mc-server && cd mc-server
+# Download server.jar from https://www.minecraft.net/en-us/download/server
+java -jar server.jar --nogui
+# Accept the EULA: edit eula.txt, set eula=true
+# Restart: java -jar server.jar --nogui
+```
+
+**Important `server.properties` settings:**
+
+```properties
+# Allow the bot to connect without a paid Minecraft account
+online-mode=false
+
+# Optional: set to creative for testing
+gamemode=creative
+```
+
+After changing `server.properties`, restart the server.
+
+### 3. Connect the bot
+
+```bash
+# Default: localhost:25565 as "ClaudeBot"
+npm start -w packages/minecraft
+
+# Custom settings via environment variables
+MC_HOST=192.168.1.50 MC_PORT=25565 MC_USERNAME=MyBot MC_VERSION=1.20.4 npm start -w packages/minecraft
+```
+
+### 4. Configure Claude
+
+#### Claude Desktop
+
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
 
 ```json
 {
   "mcpServers": {
     "minecraft": {
       "command": "node",
-      "args": ["/path/to/OpenRoost/packages/minecraft/build/index.js"],
+      "args": ["/absolute/path/to/OpenRoost/packages/minecraft/build/index.js"],
       "env": {
         "MC_HOST": "localhost",
         "MC_PORT": "25565",
@@ -42,6 +85,65 @@ MC_HOST=localhost MC_PORT=25565 MC_USERNAME=ClaudeBot npm start -w packages/mine
     }
   }
 }
+```
+
+#### Claude Code
+
+Add to your `.mcp.json` in the project root or `~/.claude/mcp.json` globally:
+
+```json
+{
+  "mcpServers": {
+    "minecraft": {
+      "command": "node",
+      "args": ["/absolute/path/to/OpenRoost/packages/minecraft/build/index.js"],
+      "env": {
+        "MC_HOST": "localhost",
+        "MC_PORT": "25565",
+        "MC_USERNAME": "ClaudeBot"
+      }
+    }
+  }
+}
+```
+
+### 5. Play
+
+Once connected, Claude has access to 22 tools. Open a conversation and try:
+
+> "Look around and tell me what you see."
+> "Follow me and help me mine some iron."
+> "Build a small shelter before nightfall."
+
+Claude will call `get_observation` to orient itself, use `go_to` and `mine_block` to gather resources, `craft_item` to make tools, and `send_chat` to communicate in-game.
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MC_HOST` | `localhost` | Minecraft server hostname or IP |
+| `MC_PORT` | `25565` | Minecraft server port |
+| `MC_USERNAME` | `ClaudeBot` | Bot's in-game username |
+| `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.20.4`) |
+
+## Development
+
+```bash
+# Build everything
+npm run build
+
+# Build individual packages
+npm run build:core
+npm run build:minecraft
+
+# Run tests (90 tests across core + minecraft)
+npm test
+
+# Watch mode for development
+npm run dev:minecraft
+
+# Clean build artifacts
+npm run clean
 ```
 
 ## Tools
@@ -98,10 +200,39 @@ MC_HOST=localhost MC_PORT=25565 MC_USERNAME=ClaudeBot npm start -w packages/mine
 | `get_task_status` | Poll async task progress |
 | `cancel_task` | Cancel any running async task |
 
+## Troubleshooting
+
+### "ECONNREFUSED" or "connect ECONNREFUSED"
+The bot can't reach the Minecraft server. Check that:
+- The server is running and finished loading
+- `MC_HOST` and `MC_PORT` match your server
+- No firewall is blocking the port
+
+### "Invalid session" or authentication errors
+Set `online-mode=false` in your `server.properties` and restart the server. The bot connects in offline/cracked mode since it doesn't have a Minecraft account.
+
+### "Version mismatch" or the bot connects but immediately disconnects
+Set the `MC_VERSION` environment variable to match your server's exact version (e.g. `MC_VERSION=1.20.4`). Run `/version` on the server console to check.
+
+### Bot connects but doesn't respond to tools
+Make sure you built after installing: `npm run build`. The MCP server runs the compiled JavaScript from `build/`, not the TypeScript source.
+
+### Bot gets stuck pathfinding
+Use `stop_movement` to cancel navigation, or `cancel_task` with the task ID. Complex terrain (water, lava, cliffs) can cause pathfinding issues.
+
 ## Design Principles
 
-- **Event piggybacking** — urgent events ride on every tool response
+- **Event piggybacking** — urgent events (damage, chat, death) ride on every tool response so Claude reacts without polling
 - **Observation snapshots** — every action returns updated world state
 - **Async task model** — long actions return task IDs, not blocking calls
-- **Right-sized granularity** — tools are intentional actions, not key presses
-- **Game-agnostic core** — EventManager and TaskManager are generic
+- **Right-sized granularity** — tools are intentional actions ("mine this block"), not input events ("press left click") or high-level goals ("build a house")
+- **Game-agnostic core** — EventManager and TaskManager are generic; adding a new game means adding a new package, not modifying core
+
+## Adding a New Game
+
+1. Create `packages/<game>/` with its own `package.json` depending on `@openroost/core`
+2. Implement a game-specific bot manager using core's EventManager and TaskManager
+3. Register MCP tools in a `tools/` directory
+4. Wire up in `src/index.ts` with `McpServer` + `StdioServerTransport`
+
+See `packages/minecraft/` as the reference implementation.
