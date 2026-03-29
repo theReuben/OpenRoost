@@ -1,0 +1,15 @@
+{
+  "name": "@openroost/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shared types, event system, and task manager for OpenRoost game servers",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

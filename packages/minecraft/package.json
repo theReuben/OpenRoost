@@ -1,0 +1,23 @@
+{
+  "name": "@openroost/minecraft",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minecraft Java Edition MCP server via Mineflayer",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node build/index.js"
+  },
+  "dependencies": {
+    "@openroost/core": "*",
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "mineflayer": "^4.20.1",
+    "mineflayer-pathfinder": "^2.4.5",
+    "minecraft-data": "^3.69.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
