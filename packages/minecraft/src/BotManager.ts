@@ -119,6 +119,15 @@ export class BotManager {
   /** Persistence layer for saving/restoring state across restarts. */
   persistence: Persistence;
 
+  /** Whether auto-reconnect is enabled. */
+  private autoReconnect = true;
+  /** Current reconnect attempt count (resets on successful connect). */
+  private reconnectAttempt = 0;
+  /** Max reconnect attempts before giving up. */
+  private maxReconnectAttempts = 10;
+  /** Callback fired after a successful reconnect (for re-wiring resource notifications). */
+  onReconnect?: () => void;
+
   constructor(config: BotConfig) {
     this.config = config;
     this.events = new EventManager();
@@ -175,6 +184,7 @@ export class BotManager {
 
       this.bot.once("spawn", () => {
         this.connected = true;
+        this.reconnectAttempt = 0; // Reset on successful connect
         this.setupEventListeners();
         resolve();
       });
@@ -183,10 +193,54 @@ export class BotManager {
         if (!this.connected) reject(err);
       });
 
-      this.bot.once("end", () => {
+      this.bot.once("end", (reason) => {
         this.connected = false;
+        console.error(`[OpenRoost] Disconnected: ${reason ?? "unknown reason"}`);
+
+        // Save state before reconnect
+        this.saveState();
+
+        if (this.autoReconnect) {
+          this.attemptReconnect();
+        }
       });
     });
+  }
+
+  /** Attempt to reconnect with exponential backoff. */
+  private async attemptReconnect(): Promise<void> {
+    if (this.reconnectAttempt >= this.maxReconnectAttempts) {
+      console.error(
+        `[OpenRoost] Failed to reconnect after ${this.maxReconnectAttempts} attempts. Giving up.`
+      );
+      return;
+    }
+
+    this.reconnectAttempt++;
+    // Exponential backoff: 2s, 4s, 8s, 16s, 32s, capped at 60s
+    const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempt - 1), 60000);
+    console.error(
+      `[OpenRoost] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempt}/${this.maxReconnectAttempts})...`
+    );
+
+    await new Promise((r) => setTimeout(r, delay));
+
+    try {
+      await this.connect();
+      console.error("[OpenRoost] Reconnected successfully!");
+      // Re-wire resource notifications
+      this.onReconnect?.();
+    } catch (err) {
+      console.error(
+        `[OpenRoost] Reconnect failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+      // connect() already sets up the end handler which will trigger another attempt
+    }
+  }
+
+  /** Disable auto-reconnect (e.g., on intentional disconnect). */
+  disableAutoReconnect(): void {
+    this.autoReconnect = false;
   }
 
   get isConnected(): boolean {

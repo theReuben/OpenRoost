@@ -46,6 +46,9 @@ async function main(): Promise<void> {
   // Wire up resource update notifications now that bot is connected
   wireResourceNotifications(server, bot);
 
+  // Re-wire resource notifications on reconnect
+  bot.onReconnect = () => wireResourceNotifications(server, bot);
+
   // Start auto-saving state every 60 seconds
   bot.startAutoSave();
 
@@ -57,6 +60,7 @@ async function main(): Promise<void> {
   // Graceful shutdown
   process.on("SIGINT", () => {
     console.error("[OpenRoost] Shutting down...");
+    bot.disableAutoReconnect(); // Don't reconnect on intentional shutdown
     bot.stopAutoSave(); // Final save + stop timer
     bot.disconnect();
     process.exit(0);
