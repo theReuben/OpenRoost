@@ -25,6 +25,7 @@ import { registerCancelTask } from "./cancelTask.js";
 import { registerStopMovement } from "./stopMovement.js";
 import { registerLookAt } from "./lookAt.js";
 import { registerGetDeathHistory } from "./getDeathHistory.js";
+import { registerRecallContainers } from "./recallContainers.js";
 
 /**
  * Register all MCP tools on the server.
@@ -66,4 +67,5 @@ export function registerAllTools(server: McpServer, bot: BotManager): void {
   registerCancelTask(server, bot);
   registerStopMovement(server, bot);
   registerGetDeathHistory(server, bot);
+  registerRecallContainers(server, bot);
 }

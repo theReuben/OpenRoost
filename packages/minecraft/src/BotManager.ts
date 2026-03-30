@@ -10,6 +10,7 @@ import {
   GameEvent,
   Position,
 } from "@openroost/core";
+import { ContainerMemory } from "./ContainerMemory.js";
 
 export interface BotConfig {
   host: string;
@@ -41,6 +42,9 @@ export class BotManager {
   deathHistory: DeathRecord[] = [];
   /** Maximum number of deaths to remember. */
   private maxDeathHistory = 10;
+
+  /** Memory of container contents with decay over time. */
+  containerMemory = new ContainerMemory();
 
   constructor(config: BotConfig) {
     this.config = config;

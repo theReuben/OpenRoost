@@ -45,6 +45,15 @@ export function registerInteractBlock(server: McpServer, bot: BotManager): void 
         };
         if (containerContents) {
           result.containerContents = containerContents;
+
+          // Record in container memory
+          const currentTick = bot.bot.time?.age ?? 0;
+          bot.containerMemory.record(
+            { x, y, z: zCoord },
+            block.name,
+            containerContents,
+            currentTick
+          );
         }
 
         const wrapped = wrapResponse(result, bot.events);
