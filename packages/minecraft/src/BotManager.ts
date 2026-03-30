@@ -125,6 +125,17 @@ export class BotManager {
   private reconnectAttempt = 0;
   /** Max reconnect attempts before giving up. */
   private maxReconnectAttempts = 10;
+  /**
+   * Guard flag that prevents a second `attemptReconnect()` from being spawned
+   * by the `end` event while one is already running in a loop.
+   *
+   * Background: `minecraft-protocol` fires `error` then immediately fires `end`
+   * on the same tick for fatal socket errors (`onFatalError` calls both).  Our
+   * `once("end")` handler and the `connect()` rejection therefore both try to
+   * start reconnect logic concurrently, incrementing the attempt counter twice
+   * per real failure and producing spurious "Reconnect failed" log lines.
+   */
+  private reconnectInProgress = false;
   /** Callback fired after a successful reconnect (for re-wiring resource notifications). */
   onReconnect?: () => void;
 
@@ -203,41 +214,58 @@ export class BotManager {
         // Save state before reconnect
         this.saveState();
 
-        if (this.autoReconnect) {
+        // Only start a new reconnect chain when one isn't already running.
+        // When connect() fails pre-spawn, minecraft-protocol fires both
+        // `error` and `end` synchronously, so connect() rejects AND this
+        // handler runs on the same tick.  Without the guard a second
+        // attemptReconnect() would start concurrently, doubling the attempt
+        // counter and producing spurious "Reconnect failed" log lines.
+        if (this.autoReconnect && !this.reconnectInProgress) {
           this.attemptReconnect();
         }
       });
     });
   }
 
-  /** Attempt to reconnect with exponential backoff. */
+  /**
+   * Reconnect loop with exponential backoff.
+   *
+   * Owns the full retry sequence so that each connect() failure is handled
+   * here rather than spawning a fresh attemptReconnect() call from the `end`
+   * event.  The `reconnectInProgress` flag stops the `end` handler from
+   * kicking off a concurrent chain while this loop is already running.
+   */
   private async attemptReconnect(): Promise<void> {
-    if (this.reconnectAttempt >= this.maxReconnectAttempts) {
+    this.reconnectInProgress = true;
+    try {
+      while (this.autoReconnect && this.reconnectAttempt < this.maxReconnectAttempts) {
+        this.reconnectAttempt++;
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s, capped at 60s
+        const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempt - 1), 60000);
+        console.error(
+          `[OpenRoost] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempt}/${this.maxReconnectAttempts})...`
+        );
+
+        await new Promise((r) => setTimeout(r, delay));
+
+        try {
+          await this.connect();
+          console.error("[OpenRoost] Reconnected successfully!");
+          this.onReconnect?.();
+          return; // success — exit the loop
+        } catch (err) {
+          console.error(
+            `[OpenRoost] Reconnect attempt ${this.reconnectAttempt} failed: ${err instanceof Error ? err.message : String(err)}`
+          );
+          // continue loop for next attempt
+        }
+      }
+
       console.error(
         `[OpenRoost] Failed to reconnect after ${this.maxReconnectAttempts} attempts. Giving up.`
       );
-      return;
-    }
-
-    this.reconnectAttempt++;
-    // Exponential backoff: 2s, 4s, 8s, 16s, 32s, capped at 60s
-    const delay = Math.min(2000 * Math.pow(2, this.reconnectAttempt - 1), 60000);
-    console.error(
-      `[OpenRoost] Reconnecting in ${delay / 1000}s (attempt ${this.reconnectAttempt}/${this.maxReconnectAttempts})...`
-    );
-
-    await new Promise((r) => setTimeout(r, delay));
-
-    try {
-      await this.connect();
-      console.error("[OpenRoost] Reconnected successfully!");
-      // Re-wire resource notifications
-      this.onReconnect?.();
-    } catch (err) {
-      console.error(
-        `[OpenRoost] Reconnect failed: ${err instanceof Error ? err.message : String(err)}`
-      );
-      // connect() already sets up the end handler which will trigger another attempt
+    } finally {
+      this.reconnectInProgress = false;
     }
   }
 
@@ -252,6 +280,13 @@ export class BotManager {
 
   private setupEventListeners(): void {
     const bot = this.bot;
+
+    // Permanent error handler so that errors emitted after the initial
+    // once("error") handler is consumed don't become unhandled EventEmitter
+    // errors (which would crash the Node.js process).
+    bot.on("error", (err) => {
+      console.error(`[OpenRoost] Bot error: ${err.message}`);
+    });
 
     bot.on("chat", (username, message) => {
       if (username === bot.username) return;
