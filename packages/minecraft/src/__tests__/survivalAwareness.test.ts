@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { EventManager } from "@openroost/core";
-import { registerGetSounds } from "../tools/getSounds.js";
 import { registerGetTimeWeather } from "../tools/getTimeWeather.js";
 import { registerSleep } from "../tools/sleep.js";
 
@@ -49,62 +48,29 @@ describe("Sound Awareness", () => {
     });
   });
 
-  describe("get_sounds tool", () => {
-    let server: ReturnType<typeof createMockServer>;
-
-    beforeEach(() => {
-      server = createMockServer();
-    });
-
-    it("returns empty when no sounds heard", async () => {
-      const bot = { events: new EventManager() } as any;
-      registerGetSounds(server as any, bot);
-      const handler = server.getHandler("get_sounds");
-      const result = await handler({ limit: 10 });
-      const parsed = JSON.parse(result.content[0].text);
-
-      expect(parsed.result.sounds).toHaveLength(0);
-      expect(parsed.result.hasDangerSounds).toBe(false);
-    });
-
-    it("returns recent sounds", async () => {
+  describe("get_events filtering (sounds via type filter)", () => {
+    it("filters events by type", () => {
       const events = new EventManager();
       events.push({
         tick: 1000,
         type: "sound_heard",
-        data: {
-          sound: "entity.zombie.ambient",
-          category: "danger:zombie",
-          position: { x: 5, y: 64, z: 10 },
-          volume: 1.0,
-          pitch: 0.8,
-        },
-        summary: "Heard danger:zombie sound",
+        data: { sound: "zombie", category: "danger:zombie" },
+        summary: "zombie",
       });
       events.push({
         tick: 1100,
-        type: "sound_heard",
-        data: {
-          sound: "entity.cow.ambient",
-          category: "animal",
-          position: { x: 20, y: 64, z: 0 },
-          volume: 0.5,
-          pitch: 1.0,
-        },
-        summary: "Heard animal sound",
+        type: "chat",
+        data: { username: "Alice", message: "hello" },
+        summary: "Alice: hello",
       });
 
-      const bot = { events } as any;
-      registerGetSounds(server as any, bot);
-      const handler = server.getHandler("get_sounds");
-      const result = await handler({ limit: 10 });
-      const parsed = JSON.parse(result.content[0].text);
-
-      expect(parsed.result.sounds).toHaveLength(2);
-      expect(parsed.result.hasDangerSounds).toBe(true);
+      const all = events.getRecent();
+      const sounds = all.filter((e) => e.type === "sound_heard");
+      expect(sounds).toHaveLength(1);
+      expect(sounds[0].data.category).toBe("danger:zombie");
     });
 
-    it("filters by category", async () => {
+    it("filters sound events by category prefix", () => {
       const events = new EventManager();
       events.push({
         tick: 1000,
@@ -119,34 +85,12 @@ describe("Sound Awareness", () => {
         summary: "cow",
       });
 
-      const bot = { events } as any;
-      registerGetSounds(server as any, bot);
-      const handler = server.getHandler("get_sounds");
-      const result = await handler({ category: "danger", limit: 10 });
-      const parsed = JSON.parse(result.content[0].text);
-
-      expect(parsed.result.sounds).toHaveLength(1);
-      expect(parsed.result.sounds[0].category).toBe("danger:zombie");
-    });
-
-    it("respects limit", async () => {
-      const events = new EventManager();
-      for (let i = 0; i < 5; i++) {
-        events.push({
-          tick: 1000 + i,
-          type: "sound_heard",
-          data: { sound: `sound_${i}`, category: "animal" },
-          summary: `sound ${i}`,
-        });
-      }
-
-      const bot = { events } as any;
-      registerGetSounds(server as any, bot);
-      const handler = server.getHandler("get_sounds");
-      const result = await handler({ limit: 2 });
-      const parsed = JSON.parse(result.content[0].text);
-
-      expect(parsed.result.sounds).toHaveLength(2);
+      const all = events.getRecent();
+      const danger = all.filter(
+        (e) => e.type === "sound_heard" && (e.data.category as string)?.startsWith("danger")
+      );
+      expect(danger).toHaveLength(1);
+      expect(danger[0].data.category).toBe("danger:zombie");
     });
   });
 });

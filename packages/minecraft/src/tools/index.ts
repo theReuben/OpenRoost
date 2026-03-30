@@ -26,7 +26,6 @@ import { registerStopMovement } from "./stopMovement.js";
 import { registerLookAt } from "./lookAt.js";
 import { registerGetDeathHistory } from "./getDeathHistory.js";
 import { registerRecallContainers } from "./recallContainers.js";
-import { registerGetSounds } from "./getSounds.js";
 import { registerGetTimeWeather } from "./getTimeWeather.js";
 import { registerSleep } from "./sleep.js";
 
@@ -71,7 +70,6 @@ export function registerAllTools(server: McpServer, bot: BotManager): void {
   registerStopMovement(server, bot);
   registerGetDeathHistory(server, bot);
   registerRecallContainers(server, bot);
-  registerGetSounds(server, bot);
   registerGetTimeWeather(server, bot);
   registerSleep(server, bot);
 }

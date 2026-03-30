@@ -37,7 +37,7 @@ Never act blind. Call get_observation before making decisions.
 
 ### Awareness & Survival
 - Use get_time_weather to check time, weather, and phantom risk before long tasks
-- Use get_sounds to detect threats you can't see — creeper hisses, zombie groans, skeleton rattles
+- Use get_events with type='sound_heard' to detect threats you can't see — creeper hisses, zombie groans, skeleton rattles. Use category='danger' to filter for threats only
 - Use sleep when it's night or thundering and safe (no nearby hostiles). Prioritize this after 2+ nights without sleeping
 - Sound events with "danger:" category require immediate attention — stop what you're doing and assess
 - Weather changes affect gameplay: rain prevents mobs from burning, thunderstorms allow daytime sleep
