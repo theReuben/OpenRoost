@@ -408,7 +408,8 @@ describe("Sleep Tool", () => {
         },
         time: { age: 14000 },
         sleep: vi.fn(async () => {}),
-        wake: vi.fn(async () => {}),
+        // Simulate server waking the bot immediately
+        once: vi.fn((_event: string, cb: Function) => { cb(); }),
       },
     } as any;
 
@@ -453,7 +454,7 @@ describe("Sleep Tool", () => {
         entity: { position: { distanceTo: () => 1 } },
         time: { age: 6000 },
         sleep: vi.fn(async () => {}),
-        wake: vi.fn(async () => {}),
+        once: vi.fn((_event: string, cb: Function) => { cb(); }),
       },
     } as any;
 

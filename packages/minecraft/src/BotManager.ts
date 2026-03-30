@@ -112,6 +112,9 @@ export class BotManager {
   /** Current weather state. */
   currentWeather: "clear" | "rain" | "thunder" = "clear";
 
+  /** Rate limiter for sound events: category → last emit timestamp (ms). */
+  private soundCooldowns = new Map<string, number>();
+
   constructor(config: BotConfig) {
     this.config = config;
     this.events = new EventManager();
@@ -256,10 +259,10 @@ export class BotManager {
       }
     });
 
-    // Sound awareness
+    // Sound awareness (rate-limited per category to avoid flooding the event queue)
     bot.on("soundEffectHeard" as any, (soundName: string, position: any, volume: number, pitch: number) => {
       const category = categorizeSoundEffect(soundName);
-      if (category) {
+      if (category && this.shouldEmitSound(category)) {
         const pos = position ? {
           x: Math.floor(position.x),
           y: Math.floor(position.y),
@@ -274,12 +277,13 @@ export class BotManager {
     });
 
     bot.on("hardcodedSoundEffectHeard" as any, (soundId: number, soundCategory: number, position: any, volume: number, pitch: number) => {
+      const category = SOUND_CATEGORIES[soundCategory] ?? "unknown";
+      if (!this.shouldEmitSound(category)) return;
       const pos = position ? {
         x: Math.floor(position.x),
         y: Math.floor(position.y),
         z: Math.floor(position.z),
       } : undefined;
-      const category = SOUND_CATEGORIES[soundCategory] ?? "unknown";
       this.pushEvent(
         "sound_heard",
         { soundId, category, position: pos, volume, pitch },
@@ -371,6 +375,21 @@ export class BotManager {
     bot.on("sleep" as any, () => {
       this.lastSleepTick = bot.time.age;
     });
+  }
+
+  /**
+   * Rate-limit sound events per category.
+   * Danger sounds get a short cooldown (2s) so threats are always reported.
+   * Other sounds get a longer cooldown (10s) to avoid flooding.
+   */
+  private shouldEmitSound(category: string): boolean {
+    const now = Date.now();
+    const lastEmit = this.soundCooldowns.get(category) ?? 0;
+    const cooldownMs = category.startsWith("danger") ? 2000 : 10000;
+
+    if (now - lastEmit < cooldownMs) return false;
+    this.soundCooldowns.set(category, now);
+    return true;
   }
 
   private pushEvent(

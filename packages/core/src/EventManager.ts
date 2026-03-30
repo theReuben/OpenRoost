@@ -11,17 +11,22 @@ const PRIORITY_ORDER: Record<EventPriority, number> = {
 
 const DEFAULT_PRIORITIES: Partial<Record<GameEventType, EventPriority>> = {
   death: "critical",
+  respawn: "critical",
+  phantom_warning: "critical",
   damage_taken: "high",
   chat: "high",
+  task_failed: "high",
+  weather_change: "normal",
+  night_fall: "normal",
   player_joined: "normal",
   player_left: "normal",
   mob_spotted: "normal",
   damage_dealt: "normal",
-  item_picked_up: "low",
+  task_complete: "normal",
   sunrise: "low",
   sunset: "low",
-  task_complete: "normal",
-  task_failed: "high",
+  item_picked_up: "low",
+  sound_heard: "low",
 };
 
 interface QueuedEvent {

@@ -98,16 +98,18 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
         // Update sleep tracking
         bot.lastSleepTick = bot.bot.time.age;
 
-        // Wait a bit for the sleep to take effect, then wake
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        // Wait for the server to wake us (morning or player interaction),
+        // with a timeout in case the wake event never fires
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => {
+            resolve();
+          }, 15000); // 15s safety timeout
 
-        try {
-          await bot.bot.wake();
-        } catch {
-          // Already awake or server handled wake
-        }
-
-        const ticksSinceSleep = 0;
+          bot.bot.once("wake" as any, () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
         const observation = bot.getObservation();
         const wrapped = wrapResponse(
           {
