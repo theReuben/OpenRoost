@@ -13,43 +13,41 @@ const MC_VIEWER_PORT = process.env.MC_VIEWER_PORT
   ? parseInt(process.env.MC_VIEWER_PORT, 10)
   : undefined;
 
-/** Handle to the running viewer HTTP server (if any), so we can close it on reconnect. */
-let viewerServer: { close: (cb?: () => void) => void } | undefined;
+/**
+ * The bot instance that currently owns the running viewer, if any.
+ * prismarine-viewer attaches a `close()` function to `bot.viewer` rather than
+ * returning the HTTP server, so we keep a reference to the bot to call it.
+ */
+let viewerBotRef: { viewer?: { close: () => void } } | undefined;
 
 /**
  * Start prismarine-viewer for the given bot instance on the specified port.
- * If a viewer server is already running, close it first so the new bot session
- * gets fresh event listeners and a clean WebSocket connection.
+ * If a viewer is already running (from a previous bot session), close it first
+ * so the new bot gets fresh event listeners and the browser gets a clean
+ * WebSocket connection after refreshing.
  */
-function startViewer(botInstance: unknown, port: number): void {
-  if (viewerServer) {
+function startViewer(botInstance: { viewer?: { close: () => void } }, port: number): void {
+  // Close the previous viewer via bot.viewer.close() — that's where
+  // prismarine-viewer stores the shutdown handle (it returns void).
+  if (viewerBotRef?.viewer?.close) {
     try {
-      viewerServer.close();
+      viewerBotRef.viewer.close();
     } catch {
       // ignore errors from closing the old server
     }
-    viewerServer = undefined;
   }
+  viewerBotRef = undefined;
 
   try {
-    // prismarine-viewer is a CommonJS module with no type declarations.
+    // prismarine-viewer is a CommonJS module with no bundled type declarations.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const prismarineViewer = require("prismarine-viewer") as {
-      mineflayer: (
-        bot: unknown,
-        opts: { port: number; firstPerson: boolean }
-      ) => { close: (cb?: () => void) => void } | undefined;
+      mineflayer: (bot: unknown, opts: { port: number; firstPerson: boolean }) => void;
     };
-    const srv = prismarineViewer.mineflayer(botInstance, {
-      port,
-      firstPerson: true,
-    });
-    if (srv && typeof srv.close === "function") {
-      viewerServer = srv;
-    }
-    console.error(
-      `[OpenRoost] Bot viewer running at http://localhost:${port}`
-    );
+    prismarineViewer.mineflayer(botInstance, { port, firstPerson: true });
+    // Store the bot ref so we can call bot.viewer.close() next time
+    viewerBotRef = botInstance;
+    console.error(`[OpenRoost] Bot viewer running at http://localhost:${port}`);
   } catch (err) {
     console.error(
       `[OpenRoost] Failed to start viewer: ${
@@ -97,14 +95,14 @@ async function main(): Promise<void> {
 
   // Start the visual viewer if MC_VIEWER_PORT is set
   if (MC_VIEWER_PORT !== undefined) {
-    startViewer(bot.bot, MC_VIEWER_PORT);
+    startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
   }
 
   // Re-wire resource notifications and restart viewer on reconnect
   bot.onReconnect = () => {
     wireResourceNotifications(server, bot);
     if (MC_VIEWER_PORT !== undefined) {
-      startViewer(bot.bot, MC_VIEWER_PORT);
+      startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
     }
   };
 
