@@ -1,0 +1,22 @@
+{
+  "name": "openroost",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP servers enabling Claude to play videogames as a cooperative AI player",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w packages/core",
+    "build:minecraft": "npm run build -w packages/minecraft",
+    "clean": "rm -rf packages/*/build",
+    "dev:minecraft": "npm run dev -w packages/minecraft",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.2"
+  }
+}

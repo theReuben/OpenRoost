@@ -1,0 +1,94 @@
+import { z } from "zod";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { wrapResponse, errorResponse, BlockInfo } from "@openroost/core";
+import { BotManager } from "../BotManager.js";
+
+export function registerScanArea(server: McpServer, bot: BotManager): void {
+  server.tool(
+    "scan_area",
+    "Scan a larger area for visible block types (blocks must have an exposed face — no x-ray vision).",
+    {
+      radius: z.number().min(4).max(32).describe("Scan radius (4-32 blocks)"),
+      blockTypes: z
+        .array(z.string())
+        .optional()
+        .describe("Optional list of block names to filter for"),
+    },
+    async ({ radius, blockTypes }) => {
+      try {
+        const { Vec3 } = (await import("vec3")).default;
+        const pos = bot.bot.entity.position;
+
+        const blocks: BlockInfo[] = [];
+        const counts = new Map<string, number>();
+
+        if (blockTypes && blockTypes.length > 0) {
+          // Targeted scan: use findBlocks then filter to exposed only
+          for (const blockType of blockTypes) {
+            const matching = bot.bot.findBlocks({
+              point: pos,
+              maxDistance: radius,
+              count: 1000,
+              matching: (block: any) => block.name === blockType,
+            });
+            for (const p of matching) {
+              const bx = Math.floor(p.x);
+              const by = Math.floor(p.y);
+              const bz = Math.floor(p.z);
+
+              // Only include if a player could actually see this block
+              if (!bot.isBlockExposed(bx, by, bz)) continue;
+
+              const block = bot.bot.blockAt(new Vec3(p.x, p.y, p.z));
+              if (block) {
+                blocks.push({
+                  name: block.name,
+                  position: { x: bx, y: by, z: bz },
+                });
+                counts.set(block.name, (counts.get(block.name) ?? 0) + 1);
+              }
+            }
+          }
+        } else {
+          // General survey: scan all exposed non-air blocks
+          for (let dx = -radius; dx <= radius; dx++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+              for (let dz = -radius; dz <= radius; dz++) {
+                const bp = pos.offset(dx, dy, dz);
+                const block = bot.bot.blockAt(bp);
+                if (block && block.name !== "air" && block.name !== "cave_air") {
+                  const bx = Math.floor(bp.x);
+                  const by = Math.floor(bp.y);
+                  const bz = Math.floor(bp.z);
+
+                  if (!bot.isBlockExposed(bx, by, bz)) continue;
+
+                  blocks.push({ name: block.name, position: { x: bx, y: by, z: bz } });
+                  counts.set(block.name, (counts.get(block.name) ?? 0) + 1);
+                }
+              }
+            }
+          }
+        }
+
+        const summaryParts = Array.from(counts.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, count]) => `${name}: ${count}`);
+        const summary = `Found ${blocks.length} visible blocks in radius ${radius}. ${summaryParts.join(", ")}`;
+
+        const wrapped = wrapResponse({ blocks, summary }, bot.events);
+        return {
+          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
+        };
+      } catch (err) {
+        const wrapped = errorResponse(
+          `Scan failed: ${err instanceof Error ? err.message : String(err)}`,
+          bot.events
+        );
+        return {
+          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
+        };
+      }
+    }
+  );
+}
