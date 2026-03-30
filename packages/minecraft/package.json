@@ -15,7 +15,8 @@
     "@modelcontextprotocol/sdk": "^1.12.1",
     "mineflayer": "^4.20.1",
     "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.69.0"
+    "minecraft-data": "^3.69.0",
+    "prismarine-viewer": "^1.28.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
