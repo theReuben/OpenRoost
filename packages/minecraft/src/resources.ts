@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { BotManager } from "./BotManager.js";
+import { getTimePhase } from "./timeUtils.js";
 
 /**
  * Register all MCP resources on the server and wire up live update
@@ -241,22 +242,13 @@ function getTimeWeather(bot: BotManager) {
   const timeOfDay = time.timeOfDay;
   const dayCount = Math.floor(time.age / 24000);
 
-  const phases = ["morning", "afternoon", "dusk", "night", "midnight", "dawn"];
-  let phase = "unknown";
-  if (timeOfDay >= 0 && timeOfDay < 6000) phase = "morning";
-  else if (timeOfDay >= 6000 && timeOfDay < 12000) phase = "afternoon";
-  else if (timeOfDay >= 12000 && timeOfDay < 13000) phase = "dusk";
-  else if (timeOfDay >= 13000 && timeOfDay < 18000) phase = "night";
-  else if (timeOfDay >= 18000 && timeOfDay < 23000) phase = "midnight";
-  else phase = "dawn";
-
   const ticksSinceSleep = bot.lastSleepTick >= 0
     ? (time.age - bot.lastSleepTick)
     : time.age;
 
   return {
     timeOfDay,
-    phase,
+    phase: getTimePhase(timeOfDay),
     dayCount,
     isNight: bot.isNight,
     weather: bot.currentWeather,

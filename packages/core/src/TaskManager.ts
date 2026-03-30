@@ -35,7 +35,7 @@ export class TaskManager {
 
   complete(id: string, result?: unknown): void {
     const task = this.tasks.get(id);
-    if (task) {
+    if (task && task.status === "running") {
       task.status = "complete";
       task.result = result;
       this.cancelCallbacks.delete(id);
@@ -44,7 +44,7 @@ export class TaskManager {
 
   fail(id: string, error: string): void {
     const task = this.tasks.get(id);
-    if (task) {
+    if (task && task.status === "running") {
       task.status = "failed";
       task.result = { error };
       this.cancelCallbacks.delete(id);

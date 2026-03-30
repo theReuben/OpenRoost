@@ -4,6 +4,7 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const HOSTILE_MOBS = [
+  // Overworld common
   "zombie",
   "skeleton",
   "creeper",
@@ -12,22 +13,38 @@ const HOSTILE_MOBS = [
   "enderman",
   "witch",
   "phantom",
+  "slime",
+  // Zombie variants
+  "zombie_villager",
   "drowned",
   "husk",
+  // Skeleton variants
   "stray",
+  "bogged",
+  // Small hostiles
+  "silverfish",
+  "endermite",
+  // Nether
   "blaze",
   "ghast",
   "magma_cube",
-  "slime",
   "wither_skeleton",
+  "hoglin",
+  "piglin_brute",
+  // Raid mobs
   "pillager",
   "vindicator",
   "evoker",
   "ravager",
   "vex",
-  "hoglin",
-  "piglin_brute",
+  // Aquatic
+  "guardian",
+  "elder_guardian",
+  // End
+  "shulker",
+  // Deep dark & 1.21+
   "warden",
+  "breeze",
 ];
 
 export function registerDefend(server: McpServer, bot: BotManager): void {

@@ -265,6 +265,7 @@ describe("Sleep Tool", () => {
       events: new EventManager(),
       isNight: false,
       currentWeather: "clear" as const,
+      bot: { game: { dimension: "minecraft:overworld" } },
     } as any;
 
     registerSleep(server as any, bot);
@@ -280,6 +281,7 @@ describe("Sleep Tool", () => {
       events: new EventManager(),
       isNight: true,
       currentWeather: "clear" as const,
+      bot: { game: { dimension: "minecraft:overworld" } },
       getNearbyEntities: vi.fn(() => [
         {
           name: "zombie",
@@ -299,6 +301,22 @@ describe("Sleep Tool", () => {
     expect(parsed.result.error).toContain("zombie");
   });
 
+  it("refuses to sleep in the Nether", async () => {
+    const bot = {
+      events: new EventManager(),
+      isNight: true,
+      currentWeather: "clear" as const,
+      bot: { game: { dimension: "minecraft:the_nether" } },
+    } as any;
+
+    registerSleep(server as any, bot);
+    const handler = server.getHandler("sleep");
+    const result = await handler({ radius: 16, forceUnsafe: false });
+    const parsed = JSON.parse(result.content[0].text);
+
+    expect(parsed.result.error).toContain("beds explode");
+  });
+
   it("returns error when no bed found", async () => {
     const bot = {
       events: new EventManager(),
@@ -306,6 +324,7 @@ describe("Sleep Tool", () => {
       currentWeather: "clear" as const,
       getNearbyEntities: vi.fn(() => []),
       bot: {
+        game: { dimension: "minecraft:overworld" },
         findBlock: vi.fn(() => null),
       },
     } as any;
