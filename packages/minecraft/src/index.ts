@@ -9,6 +9,55 @@ const MC_HOST = process.env.MC_HOST ?? "localhost";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
 const MC_USERNAME = process.env.MC_USERNAME ?? "ClaudeBot";
 const MC_VERSION = process.env.MC_VERSION;
+const MC_VIEWER_PORT = process.env.MC_VIEWER_PORT
+  ? parseInt(process.env.MC_VIEWER_PORT, 10)
+  : undefined;
+
+/** Handle to the running viewer HTTP server (if any), so we can close it on reconnect. */
+let viewerServer: { close: (cb?: () => void) => void } | undefined;
+
+/**
+ * Start prismarine-viewer for the given bot instance on the specified port.
+ * If a viewer server is already running, close it first so the new bot session
+ * gets fresh event listeners and a clean WebSocket connection.
+ */
+function startViewer(botInstance: unknown, port: number): void {
+  if (viewerServer) {
+    try {
+      viewerServer.close();
+    } catch {
+      // ignore errors from closing the old server
+    }
+    viewerServer = undefined;
+  }
+
+  try {
+    // prismarine-viewer is a CommonJS module with no type declarations.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const prismarineViewer = require("prismarine-viewer") as {
+      mineflayer: (
+        bot: unknown,
+        opts: { port: number; firstPerson: boolean }
+      ) => { close: (cb?: () => void) => void } | undefined;
+    };
+    const srv = prismarineViewer.mineflayer(botInstance, {
+      port,
+      firstPerson: true,
+    });
+    if (srv && typeof srv.close === "function") {
+      viewerServer = srv;
+    }
+    console.error(
+      `[OpenRoost] Bot viewer running at http://localhost:${port}`
+    );
+  } catch (err) {
+    console.error(
+      `[OpenRoost] Failed to start viewer: ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+}
 
 async function main(): Promise<void> {
   const server = new McpServer({
@@ -46,8 +95,18 @@ async function main(): Promise<void> {
   // Wire up resource update notifications now that bot is connected
   wireResourceNotifications(server, bot);
 
-  // Re-wire resource notifications on reconnect
-  bot.onReconnect = () => wireResourceNotifications(server, bot);
+  // Start the visual viewer if MC_VIEWER_PORT is set
+  if (MC_VIEWER_PORT !== undefined) {
+    startViewer(bot.bot, MC_VIEWER_PORT);
+  }
+
+  // Re-wire resource notifications and restart viewer on reconnect
+  bot.onReconnect = () => {
+    wireResourceNotifications(server, bot);
+    if (MC_VIEWER_PORT !== undefined) {
+      startViewer(bot.bot, MC_VIEWER_PORT);
+    }
+  };
 
   // Start auto-saving state every 60 seconds
   bot.startAutoSave();
