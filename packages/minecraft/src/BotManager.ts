@@ -159,9 +159,12 @@ export class BotManager {
     this.persistence.save(state);
   }
 
-  /** Start auto-saving state every 60 seconds. */
+  /** Start auto-saving state every 60 seconds and pruning stale tasks. */
   startAutoSave(): void {
-    this.persistence.startAutoSave(() => this.saveState(), 60_000);
+    this.persistence.startAutoSave(() => {
+      this.saveState();
+      this.tasks.prune();
+    }, 60_000);
   }
 
   /** Stop auto-saving and perform a final save. */
@@ -607,7 +610,15 @@ export class BotManager {
       else if (entity.type === "object") type = "item";
       else if (
         entity.name &&
-        ["cow", "pig", "sheep", "chicken", "horse", "donkey", "mule", "rabbit", "wolf", "cat", "fox", "bee"].includes(entity.name)
+        [
+          "cow", "pig", "sheep", "chicken", "horse", "donkey", "mule",
+          "rabbit", "wolf", "cat", "fox", "bee", "goat", "frog",
+          "camel", "sniffer", "armadillo", "parrot", "llama",
+          "trader_llama", "panda", "turtle", "axolotl", "dolphin",
+          "mooshroom", "ocelot", "polar_bear", "squid", "glow_squid",
+          "bat", "cod", "salmon", "tropical_fish", "pufferfish",
+          "strider", "allay",
+        ].includes(entity.name)
       ) {
         type = "animal";
       }

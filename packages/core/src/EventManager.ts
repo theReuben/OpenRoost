@@ -75,15 +75,20 @@ export class EventManager {
 
   /**
    * Get all events since a given tick (for the get_events tool).
+   * Only removes returned events from the queue — urgent events that
+   * haven't been drained via wrapResponse are preserved.
    */
   getSince(sinceTick: number): GameEvent[] {
-    const events = this.queue
+    const matching = this.queue.filter((q) => q.event.tick >= sinceTick);
+    const events = matching
       .map((q) => q.event)
-      .filter((e) => e.tick >= sinceTick)
       .sort((a, b) => a.tick - b.tick);
+
+    // Remove only the events we're returning; keep events that didn't match
+    const matchingSet = new Set(matching);
+    this.queue = this.queue.filter((q) => !matchingSet.has(q));
+
     this.lastDrainTick = events.length > 0 ? events[events.length - 1].tick + 1 : sinceTick;
-    // Clear the queue after full drain
-    this.queue = [];
     return events;
   }
 

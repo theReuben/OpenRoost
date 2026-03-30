@@ -1,25 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { wrapResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
-
-/** Convert Minecraft time-of-day ticks to a human-readable phase. */
-function getTimePhase(timeOfDay: number): string {
-  if (timeOfDay >= 0 && timeOfDay < 6000) return "morning";
-  if (timeOfDay >= 6000 && timeOfDay < 12000) return "afternoon";
-  if (timeOfDay >= 12000 && timeOfDay < 13000) return "dusk";
-  if (timeOfDay >= 13000 && timeOfDay < 18000) return "night";
-  if (timeOfDay >= 18000 && timeOfDay < 23000) return "midnight";
-  return "dawn";
-}
-
-/** Get the moon phase name (0-7 cycle). */
-function getMoonPhase(dayCount: number): string {
-  const phases = [
-    "full_moon", "waning_gibbous", "third_quarter", "waning_crescent",
-    "new_moon", "waxing_crescent", "first_quarter", "waxing_gibbous",
-  ];
-  return phases[dayCount % 8];
-}
+import { getTimePhase, getMoonPhase } from "../timeUtils.js";
 
 export function registerGetTimeWeather(server: McpServer, bot: BotManager): void {
   server.tool(

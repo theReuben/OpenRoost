@@ -22,11 +22,15 @@ export function registerGoTo(server: McpServer, bot: BotManager): void {
 
         const goal = new bot.Goals.GoalNear(x, y, zCoord, range);
 
-        const taskId = bot.tasks.create(`Navigate to ${x}, ${y}, ${zCoord}`);
+        let cleaned = false;
+        const cleanup = () => {
+          if (cleaned) return;
+          cleaned = true;
+          bot.bot.removeListener("goal_reached", onGoalReached);
+          bot.bot.removeListener("path_stop", onPathStopped);
+          clearTimeout(safetyTimeout);
+        };
 
-        bot.bot.pathfinder.setGoal(goal, false);
-
-        // Listen for completion
         const onGoalReached = () => {
           bot.tasks.complete(taskId, { reached: true });
           cleanup();
@@ -35,10 +39,22 @@ export function registerGoTo(server: McpServer, bot: BotManager): void {
           bot.tasks.fail(taskId, "Pathfinding stopped or blocked");
           cleanup();
         };
-        const cleanup = () => {
-          bot.bot.removeListener("goal_reached", onGoalReached);
-          bot.bot.removeListener("path_stop", onPathStopped);
-        };
+
+        // Safety timeout: clean up listeners after 5 minutes
+        const safetyTimeout = setTimeout(() => {
+          const task = bot.tasks.get(taskId);
+          if (task?.status === "running") {
+            bot.tasks.fail(taskId, "Navigation timed out after 5 minutes");
+          }
+          cleanup();
+        }, 5 * 60 * 1000);
+
+        const taskId = bot.tasks.create(`Navigate to ${x}, ${y}, ${zCoord}`, () => {
+          bot.bot.pathfinder.setGoal(null as any);
+          cleanup();
+        });
+
+        bot.bot.pathfinder.setGoal(goal, false);
 
         bot.bot.on("goal_reached", onGoalReached);
         bot.bot.on("path_stop", onPathStopped);

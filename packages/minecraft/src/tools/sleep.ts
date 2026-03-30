@@ -13,6 +13,18 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
     },
     async ({ radius, forceUnsafe }) => {
       try {
+        // Check dimension — beds explode in the Nether and End
+        const dimension = (bot.bot as any).game?.dimension ?? "";
+        if (dimension.includes("nether") || dimension.includes("the_end")) {
+          const wrapped = errorResponse(
+            `Cannot sleep in ${dimension} — beds explode! Use a respawn anchor in the Nether instead.`,
+            bot.events
+          );
+          return {
+            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
+          };
+        }
+
         // Check if it's time to sleep
         const canSleep = bot.isNight || bot.currentWeather === "thunder";
         if (!canSleep) {
