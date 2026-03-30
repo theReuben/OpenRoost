@@ -220,6 +220,19 @@ export class ContainerMemory {
   clear(): void {
     this.containers.clear();
   }
+
+  /** Export all raw records for persistence. */
+  exportRecords(): ContainerRecord[] {
+    return Array.from(this.containers.values());
+  }
+
+  /** Import records from persistence (e.g., on startup). */
+  importRecords(records: ContainerRecord[]): void {
+    for (const record of records) {
+      const key = positionKey(record.position);
+      this.containers.set(key, { ...record });
+    }
+  }
 }
 
 /** Check if an item name is "notable" enough to survive vague memory. */

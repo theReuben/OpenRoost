@@ -11,6 +11,7 @@ import {
   Position,
 } from "@openroost/core";
 import { ContainerMemory } from "./ContainerMemory.js";
+import { Persistence, PersistedState } from "./Persistence.js";
 
 export interface BotConfig {
   host: string;
@@ -115,10 +116,49 @@ export class BotManager {
   /** Rate limiter for sound events: category → last emit timestamp (ms). */
   private soundCooldowns = new Map<string, number>();
 
+  /** Persistence layer for saving/restoring state across restarts. */
+  persistence: Persistence;
+
   constructor(config: BotConfig) {
     this.config = config;
     this.events = new EventManager();
     this.tasks = new TaskManager();
+    this.persistence = new Persistence(
+      process.env.OPENROOST_STATE_FILE ?? "./openroost-state.json"
+    );
+  }
+
+  /** Restore state from disk (call before or after connect). */
+  restoreState(): void {
+    const state = this.persistence.load();
+    this.deathHistory = state.deaths;
+    this.lastSleepTick = state.lastSleepTick;
+    this.containerMemory.importRecords(state.containers);
+    console.error(
+      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths`
+    );
+  }
+
+  /** Save current state to disk. */
+  saveState(): void {
+    const state: PersistedState = {
+      containers: this.containerMemory.exportRecords(),
+      deaths: this.deathHistory,
+      lastSleepTick: this.lastSleepTick,
+      savedAt: new Date().toISOString(),
+    };
+    this.persistence.save(state);
+  }
+
+  /** Start auto-saving state every 60 seconds. */
+  startAutoSave(): void {
+    this.persistence.startAutoSave(() => this.saveState(), 60_000);
+  }
+
+  /** Stop auto-saving and perform a final save. */
+  stopAutoSave(): void {
+    this.persistence.stopAutoSave();
+    this.saveState();
   }
 
   async connect(): Promise<void> {

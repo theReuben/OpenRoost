@@ -28,6 +28,9 @@ async function main(): Promise<void> {
   registerResources(server, bot);
   registerPrompts(server);
 
+  // Restore persisted state (container memory, deaths, sleep timer)
+  bot.restoreState();
+
   // Connect to Minecraft
   console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
   try {
@@ -43,6 +46,9 @@ async function main(): Promise<void> {
   // Wire up resource update notifications now that bot is connected
   wireResourceNotifications(server, bot);
 
+  // Start auto-saving state every 60 seconds
+  bot.startAutoSave();
+
   // Start MCP transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
@@ -51,6 +57,7 @@ async function main(): Promise<void> {
   // Graceful shutdown
   process.on("SIGINT", () => {
     console.error("[OpenRoost] Shutting down...");
+    bot.stopAutoSave(); // Final save + stop timer
     bot.disconnect();
     process.exit(0);
   });
