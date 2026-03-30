@@ -52,9 +52,13 @@ export type GameEventType =
   | "mob_spotted"
   | "sunrise"
   | "sunset"
+  | "night_fall"
   | "item_picked_up"
   | "task_complete"
-  | "task_failed";
+  | "task_failed"
+  | "sound_heard"
+  | "weather_change"
+  | "phantom_warning";
 
 export type GameEvent = {
   tick: number;

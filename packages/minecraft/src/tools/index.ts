@@ -26,6 +26,9 @@ import { registerStopMovement } from "./stopMovement.js";
 import { registerLookAt } from "./lookAt.js";
 import { registerGetDeathHistory } from "./getDeathHistory.js";
 import { registerRecallContainers } from "./recallContainers.js";
+import { registerGetSounds } from "./getSounds.js";
+import { registerGetTimeWeather } from "./getTimeWeather.js";
+import { registerSleep } from "./sleep.js";
 
 /**
  * Register all MCP tools on the server.
@@ -63,9 +66,12 @@ export function registerAllTools(server: McpServer, bot: BotManager): void {
   registerTransferItems(server, bot);
   registerSmeltItem(server, bot);
 
-  // Phase 6 — Task management & memory
+  // Phase 6 — Task management, memory & awareness
   registerCancelTask(server, bot);
   registerStopMovement(server, bot);
   registerGetDeathHistory(server, bot);
   registerRecallContainers(server, bot);
+  registerGetSounds(server, bot);
+  registerGetTimeWeather(server, bot);
+  registerSleep(server, bot);
 }

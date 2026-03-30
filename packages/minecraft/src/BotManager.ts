@@ -31,6 +31,65 @@ export interface DeathRecord {
   message?: string;
 }
 
+/** Mineflayer sound categories by numeric ID */
+const SOUND_CATEGORIES: Record<number, string> = {
+  0: "master",
+  1: "music",
+  2: "record",
+  3: "weather",
+  4: "block",
+  5: "hostile",
+  6: "neutral",
+  7: "player",
+  8: "ambient",
+  9: "voice",
+};
+
+/** Categorize a named sound effect into something meaningful for the bot. */
+function categorizeSoundEffect(soundName: string): string | null {
+  // Hostile mob sounds - always important
+  if (soundName.includes("creeper") || soundName.includes("hiss")) return "danger:creeper";
+  if (soundName.includes("skeleton")) return "danger:skeleton";
+  if (soundName.includes("zombie")) return "danger:zombie";
+  if (soundName.includes("spider")) return "danger:spider";
+  if (soundName.includes("enderman")) return "danger:enderman";
+  if (soundName.includes("phantom")) return "danger:phantom";
+  if (soundName.includes("wither")) return "danger:wither";
+  if (soundName.includes("blaze")) return "danger:blaze";
+  if (soundName.includes("ghast")) return "danger:ghast";
+
+  // Explosions
+  if (soundName.includes("explode") || soundName.includes("explosion")) return "danger:explosion";
+  if (soundName.includes("tnt")) return "danger:tnt";
+
+  // Environmental warnings
+  if (soundName.includes("lava")) return "warning:lava";
+  if (soundName.includes("fire")) return "warning:fire";
+
+  // Player activity
+  if (soundName.includes("footstep") || soundName.includes("step")) return "activity:footsteps";
+  if (soundName.includes("mining") || soundName.includes("break") || soundName.includes("dig")) return "activity:mining";
+  if (soundName.includes("bow") || soundName.includes("shoot")) return "activity:ranged";
+  if (soundName.includes("anvil")) return "activity:anvil";
+
+  // Neutral/animal sounds
+  if (soundName.includes("cow") || soundName.includes("pig") || soundName.includes("sheep") || soundName.includes("chicken")) return "animal";
+
+  // Weather
+  if (soundName.includes("thunder") || soundName.includes("lightning")) return "weather:thunder";
+  if (soundName.includes("rain")) return "weather:rain";
+
+  // Door / chest interactions
+  if (soundName.includes("door") || soundName.includes("chest") || soundName.includes("open") || soundName.includes("close")) return "interaction";
+
+  // Filter out ambient noise / very common sounds that would flood events
+  if (soundName.includes("ambient") || soundName.includes("water") || soundName.includes("swim")) return null;
+  if (soundName.includes("click") || soundName.includes("pop")) return null;
+
+  // Unknown but potentially relevant
+  return null;
+}
+
 export class BotManager {
   bot!: Bot;
   events: EventManager;
@@ -45,6 +104,13 @@ export class BotManager {
 
   /** Memory of container contents with decay over time. */
   containerMemory = new ContainerMemory();
+
+  /** Tick when the bot last slept in a bed. -1 means never slept. */
+  lastSleepTick = -1;
+  /** Whether it is currently nighttime. */
+  isNight = false;
+  /** Current weather state. */
+  currentWeather: "clear" | "rain" | "thunder" = "clear";
 
   constructor(config: BotConfig) {
     this.config = config;
@@ -188,6 +254,122 @@ export class BotManager {
           `Took damage, health: ${bot.health}/20`
         );
       }
+    });
+
+    // Sound awareness
+    bot.on("soundEffectHeard" as any, (soundName: string, position: any, volume: number, pitch: number) => {
+      const category = categorizeSoundEffect(soundName);
+      if (category) {
+        const pos = position ? {
+          x: Math.floor(position.x),
+          y: Math.floor(position.y),
+          z: Math.floor(position.z),
+        } : undefined;
+        this.pushEvent(
+          "sound_heard",
+          { sound: soundName, category, position: pos, volume, pitch },
+          `Heard ${category} sound: ${soundName}${pos ? ` at (${pos.x}, ${pos.y}, ${pos.z})` : ""}`
+        );
+      }
+    });
+
+    bot.on("hardcodedSoundEffectHeard" as any, (soundId: number, soundCategory: number, position: any, volume: number, pitch: number) => {
+      const pos = position ? {
+        x: Math.floor(position.x),
+        y: Math.floor(position.y),
+        z: Math.floor(position.z),
+      } : undefined;
+      const category = SOUND_CATEGORIES[soundCategory] ?? "unknown";
+      this.pushEvent(
+        "sound_heard",
+        { soundId, category, position: pos, volume, pitch },
+        `Heard ${category} sound (id: ${soundId})${pos ? ` at (${pos.x}, ${pos.y}, ${pos.z})` : ""}`
+      );
+    });
+
+    // Time of day tracking
+    bot.on("time", () => {
+      const timeOfDay = bot.time.timeOfDay;
+      const wasNight = this.isNight;
+
+      // Night is 13000-23000 ticks in the day cycle
+      this.isNight = timeOfDay >= 13000 && timeOfDay < 23000;
+
+      if (!wasNight && this.isNight) {
+        // Check insomnia - phantoms spawn after 72000 ticks (3 days) without sleep
+        const ticksSinceSleep = this.lastSleepTick >= 0
+          ? (bot.time.age - this.lastSleepTick)
+          : bot.time.age;
+        const nightsWithoutSleep = Math.floor(ticksSinceSleep / 24000);
+
+        this.pushEvent(
+          "night_fall",
+          {
+            timeOfDay,
+            nightsWithoutSleep,
+            phantomRisk: nightsWithoutSleep >= 3,
+          },
+          nightsWithoutSleep >= 3
+            ? `Night has fallen. WARNING: ${nightsWithoutSleep} nights without sleep — phantoms will spawn! Find a bed.`
+            : `Night has fallen (${nightsWithoutSleep} night${nightsWithoutSleep !== 1 ? "s" : ""} without sleep).`
+        );
+
+        if (nightsWithoutSleep >= 3) {
+          this.pushEvent(
+            "phantom_warning",
+            { nightsWithoutSleep, ticksSinceSleep },
+            `PHANTOM WARNING: ${nightsWithoutSleep} nights without sleep. Phantoms will attack from above. Sleep in a bed urgently!`
+          );
+        }
+      } else if (wasNight && !this.isNight) {
+        this.pushEvent(
+          "sunrise",
+          { timeOfDay },
+          "The sun has risen. Hostile mobs will burn in sunlight."
+        );
+      }
+    });
+
+    // Weather tracking
+    bot.on("rain", () => {
+      const wasWeather = this.currentWeather;
+      this.currentWeather = bot.isRaining ? "rain" : "clear";
+      if (wasWeather !== this.currentWeather) {
+        this.pushEvent(
+          "weather_change",
+          { weather: this.currentWeather, previous: wasWeather },
+          this.currentWeather === "rain"
+            ? "It started raining. Visibility reduced, mobs won't burn in rain."
+            : "The rain has stopped."
+        );
+      }
+    });
+
+    bot.on("weatherUpdate" as any, () => {
+      const wasWeather = this.currentWeather;
+      if ((bot as any).thunderState > 0) {
+        this.currentWeather = "thunder";
+      } else if (bot.isRaining) {
+        this.currentWeather = "rain";
+      } else {
+        this.currentWeather = "clear";
+      }
+      if (wasWeather !== this.currentWeather) {
+        this.pushEvent(
+          "weather_change",
+          { weather: this.currentWeather, previous: wasWeather },
+          this.currentWeather === "thunder"
+            ? "A thunderstorm has begun! Lightning can strike. You can sleep during thunderstorms."
+            : this.currentWeather === "rain"
+              ? "Thunder has subsided, still raining."
+              : "The weather has cleared."
+        );
+      }
+    });
+
+    // Track sleeping
+    bot.on("sleep" as any, () => {
+      this.lastSleepTick = bot.time.age;
     });
   }
 

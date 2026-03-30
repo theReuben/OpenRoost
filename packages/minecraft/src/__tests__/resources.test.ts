@@ -96,7 +96,7 @@ function createMockBot() {
         }),
       },
       heldItem: { name: "diamond_pickaxe", count: 1, slot: 0 },
-      time: { age: 6000 },
+      time: { age: 6000, timeOfDay: 6000 },
       isRaining: false,
       on: vi.fn((event: string, cb: Function) => {
         const listeners = eventListeners.get(event) ?? [];
@@ -113,6 +113,9 @@ function createMockBot() {
     getNearbyEntities: vi.fn(() => []),
     getMovements: vi.fn(() => ({ allowSprinting: true })),
     Goals: {},
+    lastSleepTick: -1,
+    isNight: false,
+    currentWeather: "clear" as const,
     // Helper to fire events in tests
     _eventListeners: eventListeners,
   } as any;
@@ -128,13 +131,14 @@ describe("MCP Resources", () => {
     registerResources(server as any, bot);
   });
 
-  it("registers all 5 resources", () => {
-    expect(server.resource).toHaveBeenCalledTimes(5);
+  it("registers all 6 resources", () => {
+    expect(server.resource).toHaveBeenCalledTimes(6);
     const uris = server.resource.mock.calls.map((c: any) => c[1]);
     expect(uris).toContain("minecraft://status");
     expect(uris).toContain("minecraft://inventory");
     expect(uris).toContain("minecraft://position");
     expect(uris).toContain("minecraft://nearby-players");
+    expect(uris).toContain("minecraft://time-weather");
     expect(uris).toContain("minecraft://events");
   });
 

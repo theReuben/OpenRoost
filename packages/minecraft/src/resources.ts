@@ -70,6 +70,22 @@ export function registerResources(server: McpServer, bot: BotManager): void {
     })
   );
 
+  // ── minecraft://time-weather ──
+  server.resource(
+    "Time & Weather",
+    "minecraft://time-weather",
+    { description: "Current time of day, weather, moon phase, and sleep/phantom status (subscribable)" },
+    async () => ({
+      contents: [
+        {
+          uri: "minecraft://time-weather",
+          mimeType: "application/json",
+          text: JSON.stringify(getTimeWeather(bot), null, 2),
+        },
+      ],
+    })
+  );
+
   // ── minecraft://events ──
   server.resource(
     "Recent Events",
@@ -135,6 +151,24 @@ export function wireResourceNotifications(server: McpServer, bot: BotManager): v
     srv.sendResourceUpdated({ uri: "minecraft://status" }).catch(() => {});
     srv.sendResourceUpdated({ uri: "minecraft://events" }).catch(() => {});
   });
+
+  // Time changes (throttled — every 10 seconds)
+  let lastTimeNotify = 0;
+  bot.bot.on("time", () => {
+    const now = Date.now();
+    if (now - lastTimeNotify > 10000) {
+      lastTimeNotify = now;
+      srv.sendResourceUpdated({ uri: "minecraft://time-weather" }).catch(() => {});
+    }
+  });
+
+  // Weather changes
+  bot.bot.on("rain", () => {
+    srv.sendResourceUpdated({ uri: "minecraft://time-weather" }).catch(() => {});
+  });
+  bot.bot.on("weatherUpdate" as any, () => {
+    srv.sendResourceUpdated({ uri: "minecraft://time-weather" }).catch(() => {});
+  });
 }
 
 // ── Data builders ──
@@ -195,6 +229,40 @@ function getPosition(bot: BotManager) {
     yaw: Math.round((yaw * 180) / Math.PI),
     pitch: Math.round((pitch * 180) / Math.PI),
     facing: directions[idx] ?? "unknown",
+  };
+}
+
+function getTimeWeather(bot: BotManager) {
+  if (!bot.isConnected) {
+    return { connected: false };
+  }
+
+  const time = bot.bot.time;
+  const timeOfDay = time.timeOfDay;
+  const dayCount = Math.floor(time.age / 24000);
+
+  const phases = ["morning", "afternoon", "dusk", "night", "midnight", "dawn"];
+  let phase = "unknown";
+  if (timeOfDay >= 0 && timeOfDay < 6000) phase = "morning";
+  else if (timeOfDay >= 6000 && timeOfDay < 12000) phase = "afternoon";
+  else if (timeOfDay >= 12000 && timeOfDay < 13000) phase = "dusk";
+  else if (timeOfDay >= 13000 && timeOfDay < 18000) phase = "night";
+  else if (timeOfDay >= 18000 && timeOfDay < 23000) phase = "midnight";
+  else phase = "dawn";
+
+  const ticksSinceSleep = bot.lastSleepTick >= 0
+    ? (time.age - bot.lastSleepTick)
+    : time.age;
+
+  return {
+    timeOfDay,
+    phase,
+    dayCount,
+    isNight: bot.isNight,
+    weather: bot.currentWeather,
+    isRaining: bot.bot.isRaining,
+    nightsWithoutSleep: Math.floor(ticksSinceSleep / 24000),
+    phantomRisk: Math.floor(ticksSinceSleep / 24000) >= 3,
   };
 }
 
