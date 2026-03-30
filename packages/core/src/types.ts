@@ -46,6 +46,7 @@ export type GameEventType =
   | "damage_taken"
   | "damage_dealt"
   | "death"
+  | "respawn"
   | "player_joined"
   | "player_left"
   | "mob_spotted"

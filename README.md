@@ -194,11 +194,12 @@ npm run clean
 | `whisper` | Private message via /msg |
 | `get_player_info` | Online status, position, ping |
 
-### Layer 7 — Task Management
+### Layer 7 — Task Management & Memory
 | Tool | Description |
 |------|-------------|
 | `get_task_status` | Poll async task progress |
 | `cancel_task` | Cancel any running async task |
+| `get_death_history` | Recent death locations for item recovery |
 
 ## Troubleshooting
 

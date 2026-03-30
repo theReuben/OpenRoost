@@ -8,6 +8,7 @@ import {
   EntityInfo,
   ItemStack,
   GameEvent,
+  Position,
 } from "@openroost/core";
 
 export interface BotConfig {
@@ -22,12 +23,24 @@ export interface BotConfig {
  * event manager, task manager, and convenience methods for
  * building observation snapshots.
  */
+export interface DeathRecord {
+  position: Position;
+  timestamp: number;
+  gameTime: number;
+  message?: string;
+}
+
 export class BotManager {
   bot!: Bot;
   events: EventManager;
   tasks: TaskManager;
   private config: BotConfig;
   private connected = false;
+
+  /** History of death locations, most recent first. */
+  deathHistory: DeathRecord[] = [];
+  /** Maximum number of deaths to remember. */
+  private maxDeathHistory = 10;
 
   constructor(config: BotConfig) {
     this.config = config;
@@ -86,7 +99,65 @@ export class BotManager {
     });
 
     bot.on("death", () => {
-      this.pushEvent("death", {}, "Bot died and will respawn");
+      // Record death position before respawning
+      const pos = bot.entity.position;
+      const deathPos: Position = {
+        x: Math.floor(pos.x),
+        y: Math.floor(pos.y),
+        z: Math.floor(pos.z),
+      };
+      const deathRecord: DeathRecord = {
+        position: deathPos,
+        timestamp: Date.now(),
+        gameTime: bot.time?.age ?? 0,
+      };
+      this.deathHistory.unshift(deathRecord);
+      if (this.deathHistory.length > this.maxDeathHistory) {
+        this.deathHistory.pop();
+      }
+
+      this.pushEvent(
+        "death",
+        {
+          deathPosition: deathPos,
+          deathCount: this.deathHistory.length,
+        },
+        `Bot died at (${deathPos.x}, ${deathPos.y}, ${deathPos.z}). Items were dropped there. Auto-respawning...`
+      );
+
+      // Cancel all running tasks — they're invalid after death
+      for (const task of this.tasks.getRunning()) {
+        this.tasks.fail(task.id, "Cancelled: bot died");
+      }
+
+      // Auto-respawn after a brief delay
+      setTimeout(() => {
+        try {
+          (bot as any).respawn?.();
+        } catch {
+          // Some server versions handle respawn differently
+        }
+      }, 1000);
+    });
+
+    bot.on("spawn", () => {
+      // Only fire respawn event if we have death history (i.e., not the initial spawn)
+      if (this.deathHistory.length > 0) {
+        const lastDeath = this.deathHistory[0];
+        const currentPos = bot.entity.position;
+        this.pushEvent(
+          "respawn",
+          {
+            spawnPosition: {
+              x: Math.floor(currentPos.x),
+              y: Math.floor(currentPos.y),
+              z: Math.floor(currentPos.z),
+            },
+            lastDeathPosition: lastDeath.position,
+          },
+          `Respawned at (${Math.floor(currentPos.x)}, ${Math.floor(currentPos.y)}, ${Math.floor(currentPos.z)}). Dropped items are at (${lastDeath.position.x}, ${lastDeath.position.y}, ${lastDeath.position.z}).`
+        );
+      }
     });
 
     bot.on("playerJoined", (player) => {
