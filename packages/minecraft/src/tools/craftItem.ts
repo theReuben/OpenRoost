@@ -67,7 +67,20 @@ export function registerCraftItem(server: McpServer, bot: BotManager): void {
         }
 
         const recipe = availableRecipes[0];
-        await bot.bot.craft(recipe, count, craftingTable ?? undefined);
+        let craftTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            bot.bot.craft(recipe, count, craftingTable ?? undefined),
+            new Promise<never>((_, reject) => {
+              craftTimer = setTimeout(
+                () => reject(new Error("craft timed out after 15s")),
+                15_000
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(craftTimer);
+        }
 
         // Find the crafted item in inventory
         const inventoryItem = bot.bot.inventory.items().find((i: any) => i.name === item);

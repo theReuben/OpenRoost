@@ -32,7 +32,16 @@ export function registerTransferItems(server: McpServer, bot: BotManager): void 
         }
 
         // Open the container
-        const window = await bot.bot.openContainer(block);
+        let openTimer: ReturnType<typeof setTimeout> | undefined;
+        const window = await Promise.race([
+          bot.bot.openContainer(block),
+          new Promise<never>((_, reject) => {
+            openTimer = setTimeout(
+              () => reject(new Error("openContainer timed out after 10s")),
+              10_000
+            );
+          }),
+        ]).finally(() => clearTimeout(openTimer));
         const transferred: ItemStack[] = [];
 
         for (const { name, count } of items) {

@@ -62,7 +62,20 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
         }
 
         const faceVector = new Vec3(fv.x, fv.y, fv.z);
-        await bot.bot.placeBlock(referenceBlock, faceVector);
+        let placeTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            bot.bot.placeBlock(referenceBlock, faceVector),
+            new Promise<never>((_, reject) => {
+              placeTimer = setTimeout(
+                () => reject(new Error("placeBlock timed out after 10s — server may not have confirmed placement")),
+                10_000
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(placeTimer);
+        }
 
         const observation = bot.getObservation();
         const wrapped = wrapResponse(

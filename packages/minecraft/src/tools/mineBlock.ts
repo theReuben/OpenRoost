@@ -37,16 +37,23 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
         // Dig with a timeout so a hung dig (adventure mode, protected block, etc.)
         // sends a proper cancel to the server instead of leaving the break sequence
         // open for 30 s and triggering a server-side kick.
+        // The timer must be cleared on success so stopDigging() is never called
+        // on a clean connection after the block is already mined.
         const DIG_TIMEOUT_MS = 15_000;
-        await Promise.race([
-          bot.bot.dig(block),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => {
-              try { bot.bot.stopDigging(); } catch { /* already done */ }
-              reject(new Error(`dig timed out after ${DIG_TIMEOUT_MS / 1000}s — block may be unbreakable or protected`));
-            }, DIG_TIMEOUT_MS)
-          ),
-        ]);
+        let digTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            bot.bot.dig(block),
+            new Promise<never>((_, reject) => {
+              digTimer = setTimeout(() => {
+                try { bot.bot.stopDigging(); } catch { /* already done */ }
+                reject(new Error(`dig timed out after ${DIG_TIMEOUT_MS / 1000}s — block may be unbreakable or protected`));
+              }, DIG_TIMEOUT_MS);
+            }),
+          ]);
+        } finally {
+          clearTimeout(digTimer);
+        }
 
         // Brief wait for item pickup
         await new Promise((r) => setTimeout(r, 500));

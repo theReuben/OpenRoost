@@ -211,6 +211,13 @@ export class BotManager {
         this.connected = false;
         console.error(`[OpenRoost] Disconnected: ${reason ?? "unknown reason"}`);
 
+        // Cancel all running tasks — their background loops (defend, follow,
+        // attack, smelt) hold references to bot.bot and will resume on the
+        // new connection after reconnect, potentially sending unexpected packets.
+        for (const task of this.tasks.getRunning()) {
+          this.tasks.cancel(task.id);
+        }
+
         // Save state before reconnect
         this.saveState();
 

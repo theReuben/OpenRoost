@@ -105,7 +105,20 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
         }
 
         // Sleep in the bed
-        await bot.bot.sleep(bedBlock);
+        let sleepTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            bot.bot.sleep(bedBlock),
+            new Promise<never>((_, reject) => {
+              sleepTimer = setTimeout(
+                () => reject(new Error("sleep timed out after 10s — server may not have confirmed")),
+                10_000
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(sleepTimer);
+        }
 
         // Update sleep tracking
         bot.lastSleepTick = bot.bot.time.age;
