@@ -25,6 +25,19 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
 
         const blockName = block.name;
 
+        // Fail fast if the block is out of reach rather than letting dig() hang.
+        // Standard arm reach is 4.5 blocks; use 5 for a small tolerance.
+        const reach = bot.bot.entity.position.distanceTo(block.position);
+        if (reach > 5) {
+          const wrapped = errorResponse(
+            `Block ${blockName} at (${x}, ${y}, ${zCoord}) is ${Math.round(reach * 10) / 10} blocks away — move closer before mining (max reach: 4.5 blocks)`,
+            bot.events
+          );
+          return {
+            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
+          };
+        }
+
         // Auto-equip best tool for the block
         const bestTool = bot.bot.pathfinder.bestHarvestTool(block);
         if (bestTool) {
@@ -47,7 +60,7 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
             new Promise<never>((_, reject) => {
               digTimer = setTimeout(() => {
                 try { bot.bot.stopDigging(); } catch { /* already done */ }
-                reject(new Error(`dig timed out after ${DIG_TIMEOUT_MS / 1000}s — block may be unbreakable or protected`));
+                reject(new Error(`dig timed out after ${DIG_TIMEOUT_MS / 1000}s — block may be protected (spawn protection, adventure mode, or land claim)`));
               }, DIG_TIMEOUT_MS);
             }),
           ]);
