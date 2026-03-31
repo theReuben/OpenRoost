@@ -56,7 +56,9 @@ export class TaskManager {
     if (!task || task.status !== "running") return false;
 
     const cb = this.cancelCallbacks.get(id);
-    if (cb) cb();
+    if (cb) {
+      try { cb(); } catch { /* ignore — cancel callbacks must not crash callers */ }
+    }
 
     task.status = "failed";
     task.result = { error: "Cancelled by user" };
