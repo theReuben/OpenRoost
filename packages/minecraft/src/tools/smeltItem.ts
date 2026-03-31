@@ -101,12 +101,12 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
         }, 2000);
 
         // Timeout after 5 minutes
-        setTimeout(() => {
+        setTimeout(async () => {
           clearInterval(checkInterval);
           const task = bot.tasks.get(taskId);
           if (task?.status === "running") {
             try {
-              furnace.takeOutput();
+              await furnace.takeOutput();
               furnace.close();
             } catch { /* ignore */ }
             bot.tasks.complete(taskId, { reason: "timeout", partial: true });
