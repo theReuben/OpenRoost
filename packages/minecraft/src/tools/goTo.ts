@@ -28,16 +28,38 @@ export function registerGoTo(server: McpServer, bot: BotManager): void {
           cleaned = true;
           bot.bot.removeListener("goal_reached", onGoalReached);
           bot.bot.removeListener("path_stop", onPathStopped);
+          bot.bot.removeListener("path_update", onPathUpdate);
           clearTimeout(safetyTimeout);
         };
 
         const onGoalReached = () => {
-          bot.tasks.complete(taskId, { reached: true });
+          // Guard: only complete if this task is still running, so a stale
+          // listener from a previous go_to call can't complete a newer task.
+          const task = bot.tasks.get(taskId);
+          if (task?.status === "running") {
+            bot.tasks.complete(taskId, { reached: true });
+          }
           cleanup();
         };
+
         const onPathStopped = () => {
-          bot.tasks.fail(taskId, "Pathfinding stopped or blocked");
+          const task = bot.tasks.get(taskId);
+          if (task?.status === "running") {
+            bot.tasks.fail(taskId, "Pathfinding stopped — target may be blocked or unreachable");
+          }
           cleanup();
+        };
+
+        // Fail fast when the pathfinder determines there is no path at all,
+        // rather than waiting for path_stop which can lag behind.
+        const onPathUpdate = (result: any) => {
+          if (result?.status === "noPath") {
+            const task = bot.tasks.get(taskId);
+            if (task?.status === "running") {
+              bot.tasks.fail(taskId, "No path found to destination — target may be unreachable");
+            }
+            cleanup();
+          }
         };
 
         // Safety timeout: clean up listeners after 5 minutes
@@ -54,10 +76,15 @@ export function registerGoTo(server: McpServer, bot: BotManager): void {
           cleanup();
         });
 
-        bot.bot.pathfinder.setGoal(goal, false);
+        // Use dynamic pathfinding (true) so the bot starts moving immediately
+        // and recomputes the path as new chunks load. Non-dynamic (false) tries
+        // to compute the full path up-front, which fails when the destination
+        // is in unloaded chunks.
+        bot.bot.pathfinder.setGoal(goal, true);
 
         bot.bot.on("goal_reached", onGoalReached);
         bot.bot.on("path_stop", onPathStopped);
+        bot.bot.on("path_update", onPathUpdate);
 
         const observation = bot.getObservation();
         const wrapped = wrapResponse(
