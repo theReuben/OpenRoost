@@ -24,7 +24,20 @@ export function registerInteractBlock(server: McpServer, bot: BotManager): void 
           };
         }
 
-        await bot.bot.activateBlock(block);
+        let activateTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            bot.bot.activateBlock(block),
+            new Promise<never>((_, reject) => {
+              activateTimer = setTimeout(
+                () => reject(new Error("activateBlock timed out after 10s — server may not have responded")),
+                10_000
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(activateTimer);
+        }
 
         // Check if it opened a container window
         let containerContents: ItemStack[] | undefined;

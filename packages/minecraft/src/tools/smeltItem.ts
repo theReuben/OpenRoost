@@ -30,7 +30,16 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
           };
         }
 
-        const furnace = await (bot.bot as any).openFurnace(block);
+        let furnaceTimer: ReturnType<typeof setTimeout> | undefined;
+        const furnace = await Promise.race([
+          (bot.bot as any).openFurnace(block),
+          new Promise<never>((_, reject) => {
+            furnaceTimer = setTimeout(
+              () => reject(new Error("openFurnace timed out after 10s")),
+              10_000
+            );
+          }),
+        ]).finally(() => clearTimeout(furnaceTimer));
 
         // Find the items in inventory
         const itemToSmelt = bot.bot.inventory.items().find(
