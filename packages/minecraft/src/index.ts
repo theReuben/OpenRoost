@@ -78,33 +78,30 @@ async function main(): Promise<void> {
   // Restore persisted state (container memory, deaths, sleep timer)
   bot.restoreState();
 
-  // Connect to Minecraft
-  console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
-  try {
-    await bot.connect();
-    console.error("[OpenRoost] Connected to Minecraft server!");
-  } catch (err) {
-    console.error(
-      `[OpenRoost] Failed to connect: ${err instanceof Error ? err.message : String(err)}`
-    );
-    process.exit(1);
-  }
-
-  // Wire up resource update notifications now that bot is connected
-  wireResourceNotifications(server, bot);
-
-  // Start the visual viewer if MC_VIEWER_PORT is set
-  if (MC_VIEWER_PORT !== undefined) {
-    startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
-  }
-
-  // Re-wire resource notifications and restart viewer on reconnect
-  bot.onReconnect = () => {
+  // Wire resource notifications and (re)start viewer after every successful connect
+  function setupAfterConnect(): void {
     wireResourceNotifications(server, bot);
     if (MC_VIEWER_PORT !== undefined) {
       startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
     }
-  };
+  }
+
+  // Re-wire on every subsequent reconnect
+  bot.onReconnect = setupAfterConnect;
+
+  // Connect to Minecraft — failure is non-fatal; the reconnect loop keeps
+  // retrying in the background so the MCP server stays alive and usable.
+  console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
+  try {
+    await bot.connect();
+    console.error("[OpenRoost] Connected to Minecraft server!");
+    setupAfterConnect();
+  } catch (err) {
+    console.error(
+      `[OpenRoost] Failed to connect: ${err instanceof Error ? err.message : String(err)}`
+    );
+    console.error("[OpenRoost] Retrying in the background — MCP server is still available.");
+  }
 
   // Start auto-saving state every 60 seconds
   bot.startAutoSave();
@@ -114,14 +111,21 @@ async function main(): Promise<void> {
   await server.connect(transport);
   console.error("[OpenRoost] MCP server running on stdio");
 
-  // Graceful shutdown
-  process.on("SIGINT", () => {
-    console.error("[OpenRoost] Shutting down...");
+  // Graceful shutdown helper — called from all exit paths
+  const shutdown = (reason: string) => {
+    console.error(`[OpenRoost] Shutting down (${reason})...`);
     bot.disableAutoReconnect(); // Don't reconnect on intentional shutdown
     bot.stopAutoSave(); // Final save + stop timer
     bot.disconnect();
     process.exit(0);
-  });
+  };
+
+  // Stop reconnecting when the MCP client closes the stdio pipe
+  process.stdin.on("close", () => shutdown("MCP client disconnected"));
+
+  // Handle both Ctrl-C (SIGINT) and process-manager termination (SIGTERM)
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 main().catch((err) => {
