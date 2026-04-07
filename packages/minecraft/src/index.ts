@@ -44,7 +44,18 @@ function startViewer(botInstance: { viewer?: { close: () => void } }, port: numb
     const prismarineViewer = require("prismarine-viewer") as {
       mineflayer: (bot: unknown, opts: { port: number; firstPerson: boolean }) => void;
     };
-    prismarineViewer.mineflayer(botInstance, { port, firstPerson: true });
+
+    // prismarine-viewer logs a startup banner to stdout, which corrupts the
+    // MCP JSON-RPC protocol (also on stdout).  Temporarily suppress stdout
+    // during initialization and restore it immediately after.
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      prismarineViewer.mineflayer(botInstance, { port, firstPerson: true });
+    } finally {
+      process.stdout.write = origWrite;
+    }
+
     // Store the bot ref so we can call bot.viewer.close() next time
     viewerBotRef = botInstance;
     console.error(`[OpenRoost] Bot viewer running at http://localhost:${port}`);
