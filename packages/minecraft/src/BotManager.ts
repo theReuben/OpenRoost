@@ -595,7 +595,7 @@ export class BotManager {
     };
   }
 
-  private getBiome(): string {
+  getBiome(): string {
     try {
       const pos = this.bot.entity.position;
       const block = this.bot.blockAt(pos);

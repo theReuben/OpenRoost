@@ -4,6 +4,7 @@ import { BotManager } from "./BotManager.js";
 import { registerAllTools } from "./tools/index.js";
 import { registerResources, wireResourceNotifications } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
+import { createHudServer } from "./viewer.js";
 
 const MC_HOST = process.env.MC_HOST ?? "localhost";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
@@ -20,21 +21,26 @@ const MC_VIEWER_PORT = process.env.MC_VIEWER_PORT
  */
 let viewerBotRef: { viewer?: { close: () => void } } | undefined;
 
+/** The HUD overlay server wrapping the prismarine-viewer iframe. */
+let hudServerRef: { close: () => void } | undefined;
+
 /**
- * Start prismarine-viewer for the given bot instance on the specified port.
- * If a viewer is already running (from a previous bot session), close it first
- * so the new bot gets fresh event listeners and the browser gets a clean
- * WebSocket connection after refreshing.
+ * Start prismarine-viewer on an internal port and wrap it with a streaming-
+ * style HUD overlay served on the public port.
+ *
+ * prismarine-viewer → internalPort (iframe, not exposed)
+ * HUD server        → publicPort   (what the user opens in their browser)
  */
-function startViewer(botInstance: { viewer?: { close: () => void } }, port: number): void {
-  // Close the previous viewer via bot.viewer.close() — that's where
-  // prismarine-viewer stores the shutdown handle (it returns void).
+function startViewer(bot: BotManager, publicPort: number): void {
+  const internalPort = publicPort + 1;
+
+  // Tear down previous viewer + HUD
+  if (hudServerRef) {
+    try { hudServerRef.close(); } catch { /* ignore */ }
+    hudServerRef = undefined;
+  }
   if (viewerBotRef?.viewer?.close) {
-    try {
-      viewerBotRef.viewer.close();
-    } catch {
-      // ignore errors from closing the old server
-    }
+    try { viewerBotRef.viewer.close(); } catch { /* ignore */ }
   }
   viewerBotRef = undefined;
 
@@ -51,14 +57,17 @@ function startViewer(botInstance: { viewer?: { close: () => void } }, port: numb
     const origWrite = process.stdout.write.bind(process.stdout);
     process.stdout.write = (() => true) as typeof process.stdout.write;
     try {
-      prismarineViewer.mineflayer(botInstance, { port, firstPerson: true });
+      prismarineViewer.mineflayer(bot.bot, { port: internalPort, firstPerson: true });
     } finally {
       process.stdout.write = origWrite;
     }
 
     // Store the bot ref so we can call bot.viewer.close() next time
-    viewerBotRef = botInstance;
-    console.error(`[OpenRoost] Bot viewer running at http://localhost:${port}`);
+    viewerBotRef = bot.bot as { viewer?: { close: () => void } };
+    console.error(`[OpenRoost] 3D viewer on internal port ${internalPort}`);
+
+    // Start the HUD overlay on the public port
+    hudServerRef = createHudServer(bot, publicPort, internalPort);
   } catch (err) {
     console.error(
       `[OpenRoost] Failed to start viewer: ${
@@ -93,7 +102,7 @@ async function main(): Promise<void> {
   function setupAfterConnect(): void {
     wireResourceNotifications(server, bot);
     if (MC_VIEWER_PORT !== undefined) {
-      startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
+      startViewer(bot, MC_VIEWER_PORT);
     }
   }
 
