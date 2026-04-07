@@ -16,7 +16,7 @@
     "mineflayer": "^4.37.0",
     "mineflayer-pathfinder": "^2.4.5",
     "minecraft-data": "^3.109.0",
-    "minecraft-protocol": "^1.65.0",
+    "minecraft-protocol": "^1.66.0",
     "canvas": "^3.1.0",
     "prismarine-viewer": "^1.28.0"
   },

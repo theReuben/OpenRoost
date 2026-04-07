@@ -4,6 +4,7 @@ import { BotManager } from "./BotManager.js";
 import { registerAllTools } from "./tools/index.js";
 import { registerResources, wireResourceNotifications } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
+import { createHudServer } from "./viewer.js";
 
 const MC_HOST = process.env.MC_HOST ?? "localhost";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
@@ -20,21 +21,26 @@ const MC_VIEWER_PORT = process.env.MC_VIEWER_PORT
  */
 let viewerBotRef: { viewer?: { close: () => void } } | undefined;
 
+/** The HUD overlay server wrapping the prismarine-viewer iframe. */
+let hudServerRef: { close: () => void } | undefined;
+
 /**
- * Start prismarine-viewer for the given bot instance on the specified port.
- * If a viewer is already running (from a previous bot session), close it first
- * so the new bot gets fresh event listeners and the browser gets a clean
- * WebSocket connection after refreshing.
+ * Start prismarine-viewer on an internal port and wrap it with a streaming-
+ * style HUD overlay served on the public port.
+ *
+ * prismarine-viewer → internalPort (iframe, not exposed)
+ * HUD server        → publicPort   (what the user opens in their browser)
  */
-function startViewer(botInstance: { viewer?: { close: () => void } }, port: number): void {
-  // Close the previous viewer via bot.viewer.close() — that's where
-  // prismarine-viewer stores the shutdown handle (it returns void).
+function startViewer(bot: BotManager, publicPort: number): void {
+  const internalPort = publicPort + 1;
+
+  // Tear down previous viewer + HUD
+  if (hudServerRef) {
+    try { hudServerRef.close(); } catch { /* ignore */ }
+    hudServerRef = undefined;
+  }
   if (viewerBotRef?.viewer?.close) {
-    try {
-      viewerBotRef.viewer.close();
-    } catch {
-      // ignore errors from closing the old server
-    }
+    try { viewerBotRef.viewer.close(); } catch { /* ignore */ }
   }
   viewerBotRef = undefined;
 
@@ -44,10 +50,24 @@ function startViewer(botInstance: { viewer?: { close: () => void } }, port: numb
     const prismarineViewer = require("prismarine-viewer") as {
       mineflayer: (bot: unknown, opts: { port: number; firstPerson: boolean }) => void;
     };
-    prismarineViewer.mineflayer(botInstance, { port, firstPerson: true });
+
+    // prismarine-viewer logs a startup banner to stdout, which corrupts the
+    // MCP JSON-RPC protocol (also on stdout).  Temporarily suppress stdout
+    // during initialization and restore it immediately after.
+    const origWrite = process.stdout.write.bind(process.stdout);
+    process.stdout.write = (() => true) as typeof process.stdout.write;
+    try {
+      prismarineViewer.mineflayer(bot.bot, { port: internalPort, firstPerson: true });
+    } finally {
+      process.stdout.write = origWrite;
+    }
+
     // Store the bot ref so we can call bot.viewer.close() next time
-    viewerBotRef = botInstance;
-    console.error(`[OpenRoost] Bot viewer running at http://localhost:${port}`);
+    viewerBotRef = bot.bot as { viewer?: { close: () => void } };
+    console.error(`[OpenRoost] 3D viewer on internal port ${internalPort}`);
+
+    // Start the HUD overlay on the public port
+    hudServerRef = createHudServer(bot, publicPort, internalPort);
   } catch (err) {
     console.error(
       `[OpenRoost] Failed to start viewer: ${
@@ -78,33 +98,30 @@ async function main(): Promise<void> {
   // Restore persisted state (container memory, deaths, sleep timer)
   bot.restoreState();
 
-  // Connect to Minecraft
+  // Wire resource notifications and (re)start viewer after every successful connect
+  function setupAfterConnect(): void {
+    wireResourceNotifications(server, bot);
+    if (MC_VIEWER_PORT !== undefined) {
+      startViewer(bot, MC_VIEWER_PORT);
+    }
+  }
+
+  // Re-wire on every subsequent reconnect
+  bot.onReconnect = setupAfterConnect;
+
+  // Connect to Minecraft — failure is non-fatal; the reconnect loop keeps
+  // retrying in the background so the MCP server stays alive and usable.
   console.error(`[OpenRoost] Connecting to ${MC_HOST}:${MC_PORT} as ${MC_USERNAME}...`);
   try {
     await bot.connect();
     console.error("[OpenRoost] Connected to Minecraft server!");
+    setupAfterConnect();
   } catch (err) {
     console.error(
       `[OpenRoost] Failed to connect: ${err instanceof Error ? err.message : String(err)}`
     );
-    process.exit(1);
+    console.error("[OpenRoost] Retrying in the background — MCP server is still available.");
   }
-
-  // Wire up resource update notifications now that bot is connected
-  wireResourceNotifications(server, bot);
-
-  // Start the visual viewer if MC_VIEWER_PORT is set
-  if (MC_VIEWER_PORT !== undefined) {
-    startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
-  }
-
-  // Re-wire resource notifications and restart viewer on reconnect
-  bot.onReconnect = () => {
-    wireResourceNotifications(server, bot);
-    if (MC_VIEWER_PORT !== undefined) {
-      startViewer(bot.bot as { viewer?: { close: () => void } }, MC_VIEWER_PORT);
-    }
-  };
 
   // Start auto-saving state every 60 seconds
   bot.startAutoSave();
@@ -114,14 +131,23 @@ async function main(): Promise<void> {
   await server.connect(transport);
   console.error("[OpenRoost] MCP server running on stdio");
 
-  // Graceful shutdown
-  process.on("SIGINT", () => {
-    console.error("[OpenRoost] Shutting down...");
+  // Graceful shutdown helper — called from all exit paths
+  const shutdown = (reason: string) => {
+    console.error(`[OpenRoost] Shutting down (${reason})...`);
     bot.disableAutoReconnect(); // Don't reconnect on intentional shutdown
     bot.stopAutoSave(); // Final save + stop timer
     bot.disconnect();
     process.exit(0);
-  });
+  };
+
+  // Use the transport's own close callback rather than process.stdin.on("close").
+  // StdioServerTransport manages stdin internally (pause/resume/end), so listening
+  // to stdin directly fires spuriously and races with the MCP protocol.
+  transport.onclose = () => shutdown("MCP client disconnected");
+
+  // Handle Ctrl-C (SIGINT) and process-manager termination (SIGTERM)
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 main().catch((err) => {

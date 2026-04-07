@@ -196,6 +196,37 @@ export class BotManager {
 
       this.bot.loadPlugin(pathfinder);
 
+      // Workaround for https://github.com/PrismarineJS/mineflayer/issues/3623:
+      // mineflayer does not send the configuration.settings (clientInformation)
+      // packet during the MC 1.20.2+ configuration phase.  Strict servers wait
+      // for it and then close the socket without a Minecraft disconnect packet,
+      // producing a silent "socketClosed" disconnect a few seconds after spawn.
+      // We inject the packet whenever the server sends select_known_packs (the
+      // first server→client packet in every configuration phase, including
+      // mid-session reconfigurations) so it is present for each config cycle.
+      const rawClient = (this.bot as any)._client;
+
+      // Workaround for https://github.com/PrismarineJS/mineflayer/issues/3623:
+      // Send the configuration.settings (clientInformation) packet that mineflayer
+      // omits. Without it, strict servers silently close the socket after a timeout.
+      rawClient.on("select_known_packs", () => {
+        try {
+          rawClient.write("settings", {
+            locale: "en_US",
+            viewDistance: 10,
+            chatFlags: 0,
+            chatColors: true,
+            skinParts: 127,
+            mainHand: 1,
+            enableTextFiltering: false,
+            enableServerListing: true,
+            particleStatus: 0,
+          });
+        } catch {
+          // Lenient servers will still accept the connection without it
+        }
+      });
+
       this.bot.once("spawn", () => {
         this.connected = true;
         this.reconnectAttempt = 0; // Reset on successful connect
@@ -564,7 +595,7 @@ export class BotManager {
     };
   }
 
-  private getBiome(): string {
+  getBiome(): string {
     try {
       const pos = this.bot.entity.position;
       const block = this.bot.blockAt(pos);
