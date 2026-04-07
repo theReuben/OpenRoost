@@ -206,33 +206,24 @@ export class BotManager {
       // mid-session reconfigurations) so it is present for each config cycle.
       const rawClient = (this.bot as any)._client;
 
-      // Diagnostic: track the last few packets received so we can log them on disconnect.
-      const recentPackets: string[] = [];
-      rawClient.on("packet", (_data: unknown, meta: { name: string; state: string }) => {
-        const entry = `${meta.state}/${meta.name}`;
-        recentPackets.push(entry);
-        if (recentPackets.length > 10) recentPackets.shift();
-      });
-      // Expose for the end handler below
-      (this as any)._recentPackets = recentPackets;
-
+      // Workaround for https://github.com/PrismarineJS/mineflayer/issues/3623:
+      // Send the configuration.settings (clientInformation) packet that mineflayer
+      // omits. Without it, strict servers silently close the socket after a timeout.
       rawClient.on("select_known_packs", () => {
-        console.error("[OpenRoost] Config phase: select_known_packs received, sending settings...");
         try {
           rawClient.write("settings", {
             locale: "en_US",
             viewDistance: 10,
-            chatFlags: 0,         // 0 = chat enabled
+            chatFlags: 0,
             chatColors: true,
-            skinParts: 127,       // all skin layers on
-            mainHand: 1,          // 1 = right hand
+            skinParts: 127,
+            mainHand: 1,
             enableTextFiltering: false,
             enableServerListing: true,
-            particleStatus: 0,    // 0 = all particles
+            particleStatus: 0,
           });
-          console.error("[OpenRoost] Config phase: settings sent OK");
-        } catch (err) {
-          console.error(`[OpenRoost] Config phase: settings write failed: ${err instanceof Error ? err.message : String(err)}`);
+        } catch {
+          // Lenient servers will still accept the connection without it
         }
       });
 
@@ -249,8 +240,7 @@ export class BotManager {
 
       this.bot.once("end", (reason) => {
         this.connected = false;
-        const recent = (this as any)._recentPackets as string[] | undefined;
-        console.error(`[OpenRoost] Disconnected: ${reason ?? "unknown reason"} | last packets: ${recent?.slice(-5).join(", ") ?? "none"}`);
+        console.error(`[OpenRoost] Disconnected: ${reason ?? "unknown reason"}`);
 
         // Cancel all running tasks — their background loops (defend, follow,
         // attack, smelt) hold references to bot.bot and will resume on the
