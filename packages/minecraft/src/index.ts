@@ -120,10 +120,12 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  // Stop reconnecting when the MCP client closes the stdio pipe
-  process.stdin.on("close", () => shutdown("MCP client disconnected"));
+  // Use the transport's own close callback rather than process.stdin.on("close").
+  // StdioServerTransport manages stdin internally (pause/resume/end), so listening
+  // to stdin directly fires spuriously and races with the MCP protocol.
+  transport.onclose = () => shutdown("MCP client disconnected");
 
-  // Handle both Ctrl-C (SIGINT) and process-manager termination (SIGTERM)
+  // Handle Ctrl-C (SIGINT) and process-manager termination (SIGTERM)
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
