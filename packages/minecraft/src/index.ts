@@ -6,7 +6,7 @@ import { registerResources, wireResourceNotifications } from "./resources.js";
 import { registerPrompts } from "./prompts.js";
 import { createHudServer } from "./viewer.js";
 
-const MC_HOST = process.env.MC_HOST ?? "localhost";
+const MC_HOST = process.env.MC_HOST ?? "127.0.0.1";
 const MC_PORT = parseInt(process.env.MC_PORT ?? "25565", 10);
 const MC_USERNAME = process.env.MC_USERNAME ?? "ClaudeBot";
 const MC_VERSION = process.env.MC_VERSION;
@@ -152,5 +152,20 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   console.error("[OpenRoost] Fatal error:", err);
+  process.exit(1);
+});
+
+// Route uncaught exceptions and unhandled promise rejections to stderr so
+// that stdout stays clean (JSON-RPC only).  Without these handlers Node.js
+// prints to stderr by default since v15, but registering them explicitly
+// prevents any runtime from inadvertently writing to stdout and also lets
+// us add a consistent "[OpenRoost]" prefix for easier log filtering.
+process.on("uncaughtException", (err) => {
+  console.error("[OpenRoost] Uncaught exception:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[OpenRoost] Unhandled promise rejection:", reason);
   process.exit(1);
 });

@@ -209,9 +209,9 @@ export class BotManager {
       // Workaround for https://github.com/PrismarineJS/mineflayer/issues/3623:
       // Send the configuration.settings (clientInformation) packet that mineflayer
       // omits. Without it, strict servers silently close the socket after a timeout.
-      rawClient.on("select_known_packs", () => {
+      rawClient?.on("select_known_packs", () => {
         try {
-          rawClient.write("settings", {
+          rawClient?.write("settings", {
             locale: "en_US",
             viewDistance: 10,
             chatFlags: 0,

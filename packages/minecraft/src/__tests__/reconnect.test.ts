@@ -59,6 +59,9 @@ function makeFakeBot() {
   bot.username = "TestBot";
   bot.entities = {};
   bot.experience = { points: 0 };
+  // Minimal stub for the rawClient workaround (mineflayer#3623)
+  bot._client = new EventEmitter();
+  bot._client.write = vi.fn();
   return bot;
 }
 

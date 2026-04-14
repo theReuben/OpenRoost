@@ -58,7 +58,7 @@ After changing `server.properties`, restart the server.
 ### 3. Connect the bot
 
 ```bash
-# Default: localhost:25565 as "ClaudeBot"
+# Default: 127.0.0.1:25565 as "ClaudeBot"
 npm start -w packages/minecraft
 
 # Custom settings via environment variables
@@ -78,7 +78,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "command": "node",
       "args": ["/absolute/path/to/OpenRoost/packages/minecraft/build/index.js"],
       "env": {
-        "MC_HOST": "localhost",
+        "MC_HOST": "127.0.0.1",
         "MC_PORT": "25565",
         "MC_USERNAME": "ClaudeBot"
       }
@@ -98,7 +98,7 @@ Add to your `.mcp.json` in the project root or `~/.claude/mcp.json` globally:
       "command": "node",
       "args": ["/absolute/path/to/OpenRoost/packages/minecraft/build/index.js"],
       "env": {
-        "MC_HOST": "localhost",
+        "MC_HOST": "127.0.0.1",
         "MC_PORT": "25565",
         "MC_USERNAME": "ClaudeBot"
       }
@@ -121,7 +121,7 @@ Claude will call `get_observation` to orient itself, use `go_to` and `mine_block
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MC_HOST` | `localhost` | Minecraft server hostname or IP |
+| `MC_HOST` | `127.0.0.1` | Minecraft server hostname or IP |
 | `MC_PORT` | `25565` | Minecraft server port |
 | `MC_USERNAME` | `ClaudeBot` | Bot's in-game username |
 | `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.20.4`) |
