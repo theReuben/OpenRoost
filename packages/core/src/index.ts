@@ -4,4 +4,5 @@ export type { EventPriority } from "./EventManager.js";
 export { TaskManager } from "./TaskManager.js";
 export { wrapResponse, errorResponse, toolResult } from "./toolHelpers.js";
 export { SkillLibrary } from "./SkillLibrary.js";
+export { JsonStore } from "./JsonStore.js";
 export type { Skill, SkillInput, ScoredSkill } from "./SkillLibrary.js";

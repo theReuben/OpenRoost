@@ -1,6 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
-import { dirname } from "path";
-import { Position } from "@openroost/core";
+import { JsonStore, Position } from "@openroost/core";
 import type { Skill } from "@openroost/core";
 import type { DeathRecord } from "./BotManager.js";
 
@@ -28,68 +26,30 @@ export interface PersistedState {
   savedAt: string;
 }
 
-const DEFAULT_STATE: PersistedState = {
-  containers: [],
-  deaths: [],
-  lastSleepTick: -1,
-  skills: [],
-  savedAt: new Date().toISOString(),
-};
+function defaultState(): PersistedState {
+  return {
+    containers: [],
+    deaths: [],
+    lastSleepTick: -1,
+    skills: [],
+    savedAt: new Date().toISOString(),
+  };
+}
+
+function validateState(parsed: PersistedState): PersistedState {
+  if (!Array.isArray(parsed.containers)) parsed.containers = [];
+  if (!Array.isArray(parsed.deaths)) parsed.deaths = [];
+  if (typeof parsed.lastSleepTick !== "number") parsed.lastSleepTick = -1;
+  if (!Array.isArray(parsed.skills)) parsed.skills = [];
+  return parsed;
+}
 
 /**
- * Simple JSON file persistence for bot state that should survive restarts.
- * Saves to a configurable path (default: ./openroost-state.json).
+ * Minecraft-specific persistence: a typed JsonStore for bot state that
+ * should survive restarts (default path: ./openroost-state.json).
  */
-export class Persistence {
-  private filePath: string;
-  private saveTimer: ReturnType<typeof setInterval> | null = null;
-
+export class Persistence extends JsonStore<PersistedState> {
   constructor(filePath?: string) {
-    this.filePath = filePath ?? "./openroost-state.json";
-  }
-
-  /** Load state from disk. Returns defaults if file doesn't exist or is corrupt. */
-  load(): PersistedState {
-    try {
-      const raw = readFileSync(this.filePath, "utf-8");
-      const parsed = JSON.parse(raw) as PersistedState;
-      // Basic validation
-      if (!Array.isArray(parsed.containers)) parsed.containers = [];
-      if (!Array.isArray(parsed.deaths)) parsed.deaths = [];
-      if (typeof parsed.lastSleepTick !== "number") parsed.lastSleepTick = -1;
-      if (!Array.isArray(parsed.skills)) parsed.skills = [];
-      return parsed;
-    } catch {
-      return { ...DEFAULT_STATE };
-    }
-  }
-
-  /** Save state to disk. */
-  save(state: PersistedState): void {
-    try {
-      mkdirSync(dirname(this.filePath), { recursive: true });
-      writeFileSync(
-        this.filePath,
-        JSON.stringify({ ...state, savedAt: new Date().toISOString() }, null, 2)
-      );
-    } catch (err) {
-      console.error(
-        `[OpenRoost] Failed to save state: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
-  }
-
-  /** Start auto-saving every N milliseconds (default 60s). */
-  startAutoSave(saveFn: () => void, intervalMs = 60_000): void {
-    this.stopAutoSave();
-    this.saveTimer = setInterval(saveFn, intervalMs);
-  }
-
-  /** Stop auto-saving. */
-  stopAutoSave(): void {
-    if (this.saveTimer) {
-      clearInterval(this.saveTimer);
-      this.saveTimer = null;
-    }
+    super(filePath ?? "./openroost-state.json", defaultState, validateState);
   }
 }
