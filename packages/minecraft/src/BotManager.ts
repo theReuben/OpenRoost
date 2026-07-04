@@ -3,6 +3,7 @@ import { pathfinder, Movements, goals } from "mineflayer-pathfinder";
 import {
   EventManager,
   TaskManager,
+  SkillLibrary,
   ObservationSnapshot,
   BlockInfo,
   EntityInfo,
@@ -106,6 +107,9 @@ export class BotManager {
   /** Memory of container contents with decay over time. */
   containerMemory = new ContainerMemory();
 
+  /** Library of learned strategies, persisted across sessions. */
+  skills = new SkillLibrary();
+
   /** Tick when the bot last slept in a bed. -1 means never slept. */
   lastSleepTick = -1;
   /** Whether it is currently nighttime. */
@@ -154,8 +158,9 @@ export class BotManager {
     this.deathHistory = state.deaths;
     this.lastSleepTick = state.lastSleepTick;
     this.containerMemory.importRecords(state.containers);
+    this.skills.importSkills(state.skills);
     console.error(
-      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths`
+      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths, ${state.skills.length} skills`
     );
   }
 
@@ -165,6 +170,7 @@ export class BotManager {
       containers: this.containerMemory.exportRecords(),
       deaths: this.deathHistory,
       lastSleepTick: this.lastSleepTick,
+      skills: this.skills.exportSkills(),
       savedAt: new Date().toISOString(),
     };
     this.persistence.save(state);

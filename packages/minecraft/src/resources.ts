@@ -87,6 +87,26 @@ export function registerResources(server: McpServer, bot: BotManager): void {
     })
   );
 
+  // ── minecraft://skills ──
+  server.registerResource(
+    "Learned Skills",
+    "minecraft://skills",
+    { description: "Persistent library of strategies learned in past sessions" },
+    async () => ({
+      contents: [
+        {
+          uri: "minecraft://skills",
+          mimeType: "application/json",
+          text: JSON.stringify(
+            { count: bot.skills.size, skills: bot.skills.list() },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
   // ── minecraft://events ──
   server.registerResource(
     "Recent Events",

@@ -55,6 +55,20 @@ describe("Persistence", () => {
         },
       ],
       lastSleepTick: 48000,
+      skills: [
+        {
+          name: "branch-mine-diamonds",
+          description: "Diamond mining at y=-58",
+          strategy: "Trunk corridor, branches every 3 blocks",
+          tags: ["mining"],
+          timesUsed: 2,
+          successes: 2,
+          failures: 0,
+          notes: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
       savedAt: new Date().toISOString(),
     };
 
@@ -67,6 +81,8 @@ describe("Persistence", () => {
     expect(loaded.deaths).toHaveLength(1);
     expect(loaded.deaths[0].position.x).toBe(100);
     expect(loaded.lastSleepTick).toBe(48000);
+    expect(loaded.skills).toHaveLength(1);
+    expect(loaded.skills[0].name).toBe("branch-mine-diamonds");
   });
 
   it("handles corrupt file gracefully", () => {

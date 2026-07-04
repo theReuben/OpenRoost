@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { EventManager, TaskManager } from "@openroost/core";
+import { EventManager, TaskManager, SkillLibrary } from "@openroost/core";
 import type { ObservationSnapshot, ItemStack } from "@openroost/core";
 import { registerResources, wireResourceNotifications } from "../resources.js";
 
@@ -31,6 +31,7 @@ function createMockBot() {
 
   return {
     events,
+    skills: new SkillLibrary(),
     tasks,
     isConnected: true,
     bot: {
@@ -131,8 +132,8 @@ describe("MCP Resources", () => {
     registerResources(server as any, bot);
   });
 
-  it("registers all 6 resources", () => {
-    expect(server.registerResource).toHaveBeenCalledTimes(6);
+  it("registers all 7 resources", () => {
+    expect(server.registerResource).toHaveBeenCalledTimes(7);
     const uris = server.registerResource.mock.calls.map((c: any) => c[1]);
     expect(uris).toContain("minecraft://status");
     expect(uris).toContain("minecraft://inventory");
@@ -140,6 +141,7 @@ describe("MCP Resources", () => {
     expect(uris).toContain("minecraft://nearby-players");
     expect(uris).toContain("minecraft://time-weather");
     expect(uris).toContain("minecraft://events");
+    expect(uris).toContain("minecraft://skills");
   });
 
   describe("minecraft://status", () => {

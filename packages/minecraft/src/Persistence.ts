@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from "fs";
 import { dirname } from "path";
 import { Position } from "@openroost/core";
+import type { Skill } from "@openroost/core";
 import type { DeathRecord } from "./BotManager.js";
 
 /** Shape of the persisted state file. */
@@ -20,6 +21,9 @@ export interface PersistedState {
   /** Last sleep tick (-1 = never). */
   lastSleepTick: number;
 
+  /** Learned skills (Voyager-style skill library). */
+  skills: Skill[];
+
   /** Saved at timestamp. */
   savedAt: string;
 }
@@ -28,6 +32,7 @@ const DEFAULT_STATE: PersistedState = {
   containers: [],
   deaths: [],
   lastSleepTick: -1,
+  skills: [],
   savedAt: new Date().toISOString(),
 };
 
@@ -52,6 +57,7 @@ export class Persistence {
       if (!Array.isArray(parsed.containers)) parsed.containers = [];
       if (!Array.isArray(parsed.deaths)) parsed.deaths = [];
       if (typeof parsed.lastSleepTick !== "number") parsed.lastSleepTick = -1;
+      if (!Array.isArray(parsed.skills)) parsed.skills = [];
       return parsed;
     } catch {
       return { ...DEFAULT_STATE };

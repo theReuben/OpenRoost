@@ -52,6 +52,12 @@ Never act blind. Call get_observation before making decisions.
 - Tell the player what you're doing via send_chat
 - Use whisper for private messages, get_player_info for teammate details
 
+### Learning (skill library)
+- Before any non-trivial task, call recall_skills with a short task description — a past session may already know the best approach
+- After completing (or failing) a non-trivial task, call save_skill with what you learned: the strategy that worked, or a note on what went wrong
+- Reuse skill names when refining a strategy — outcomes accumulate into a success rate that ranks proven skills higher
+- Skills persist across sessions; this is how you get better over time
+
 ### Resource Streams
 - Subscribe to minecraft://time-weather for automatic day/night and weather updates
 - Subscribe to minecraft://inventory for slot change notifications
@@ -73,6 +79,8 @@ Never act blind. Call get_observation before making decisions.
 
 ## Avoid
 
+- Starting complex tasks without checking recall_skills first
+- Finishing a hard-won task without saving what you learned
 - Acting without observing
 - Ignoring health/food/phantom timer
 - Mining without proper tools
