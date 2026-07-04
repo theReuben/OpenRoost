@@ -12,13 +12,13 @@
   },
   "dependencies": {
     "@openroost/core": "*",
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "mineflayer": "^4.37.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "mineflayer": "^4.37.1",
     "mineflayer-pathfinder": "^2.4.5",
-    "minecraft-data": "^3.109.0",
-    "minecraft-protocol": "^1.66.0",
+    "minecraft-data": "^3.111.0",
+    "minecraft-protocol": "^1.66.2",
     "canvas": "^3.1.0",
-    "prismarine-viewer": "^1.28.0"
+    "prismarine-viewer": "^1.33.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
