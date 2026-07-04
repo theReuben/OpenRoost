@@ -240,13 +240,33 @@ Use `stop_movement` to cancel navigation, or `cancel_task` with the task ID. Com
 - **Observation snapshots** — every action returns updated world state
 - **Async task model** — long actions return task IDs, not blocking calls
 - **Right-sized granularity** — tools are intentional actions ("mine this block"), not input events ("press left click") or high-level goals ("build a house")
-- **Game-agnostic core** — EventManager and TaskManager are generic; adding a new game means adding a new package, not modifying core
+- **Game-agnostic core** — EventManager, TaskManager, SkillLibrary, and JsonStore are generic; adding a new game means adding a new package, not modifying core
+- **Learning across sessions** — the skill library persists strategies with outcomes, so the agent improves the more it plays
+- **Structured output everywhere** — every tool emits MCP structuredContent alongside text, so typed clients skip JSON re-parsing
 
 ## Adding a New Game
 
-1. Create `packages/<game>/` with its own `package.json` depending on `@openroost/core`
-2. Implement a game-specific bot manager using core's EventManager and TaskManager
-3. Register MCP tools in a `tools/` directory
-4. Wire up in `src/index.ts` with `McpServer` + `StdioServerTransport`
+```bash
+node scripts/create-game.mjs <game-name>   # e.g. factorio
+npm install && npm run build
+```
 
-See `packages/minecraft/` as the reference implementation.
+The scaffolder generates a compiling, bootable MCP server wired to core's
+event, task, skill, and persistence systems — including working
+`save_skill`/`recall_skills` tools, so the agent learns your game from day
+one. Then implement the game connection and add perception/action tools.
+
+See **[docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md)** for the full guide
+(integration routes for Luanti, Factorio, Terraria, Stardew Valley, Screeps,
+and the conventions that keep game packages consistent), and
+`packages/minecraft/` as the reference implementation.
+
+## Roadmap
+
+- **MCP SDK v2** once it ships as stable alongside the 2026-07-28 spec
+  (extensions framework, MCP Tasks — a natural fit for OpenRoost's async
+  task model — and MCP Apps for a richer in-client HUD)
+- **Second game package** to prove the core boundary (Luanti or Factorio
+  are the strongest candidates)
+- **Autonomous sessions** — standing goals + the skill/task systems already
+  support unattended play; needs a driving loop on the client side
