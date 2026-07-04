@@ -38,22 +38,14 @@ export function registerRecallContainers(
             },
             bot.events
           );
-          return {
-            content: [
-              { type: "text", text: JSON.stringify(wrapped, null, 2) },
-            ],
-          };
+          return toolResult(wrapped);
         }
 
         const wrapped = wrapResponse(
           { found: true, container: memory },
           bot.events
         );
-        return {
-          content: [
-            { type: "text", text: JSON.stringify(wrapped, null, 2) },
-          ],
-        };
+        return toolResult(wrapped);
       }
 
       // Recall all containers

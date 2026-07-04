@@ -256,6 +256,71 @@ export function registerRecallSkills(server: McpServer, game: ${className}): voi
 }
 `,
 
+  "src/__tests__/tools.test.ts": `import { describe, it, expect, beforeEach, vi } from "vitest";
+import { ${className} } from "../${className}.js";
+import { registerAllTools } from "../tools/index.js";
+
+type ToolHandler = (args: any) => Promise<any>;
+
+/**
+ * Standard OpenRoost test pattern: mock the MCP server as a capture map.
+ * Never import the real SDK in tests.
+ */
+function createMockServer() {
+  const handlers = new Map<string, ToolHandler>();
+  return {
+    registerTool: vi.fn((name: string, _config: any, handler: ToolHandler) => {
+      handlers.set(name, handler);
+    }),
+    getHandler(name: string): ToolHandler {
+      const h = handlers.get(name);
+      if (!h) throw new Error(\`No handler registered for \${name}\`);
+      return h;
+    },
+  };
+}
+
+/** Parse the {result, urgentEvents?} envelope out of a tool response. */
+function parseResult(response: any) {
+  return JSON.parse(response.content[0].text).result;
+}
+
+describe("${name} tools", () => {
+  let server: ReturnType<typeof createMockServer>;
+  let game: ${className};
+
+  beforeEach(() => {
+    server = createMockServer();
+    game = new ${className}({ host: "127.0.0.1", port: 0 });
+    registerAllTools(server as any, game);
+  });
+
+  it("get_status reports connection state", async () => {
+    const result = await server.getHandler("get_status")({});
+    expect(parseResult(result).connected).toBe(false);
+    // structuredContent mirrors the text payload for typed clients
+    expect(result.structuredContent.result.connected).toBe(false);
+  });
+
+  it("save_skill and recall_skills round-trip", async () => {
+    await server.getHandler("save_skill")({
+      name: "example-skill",
+      description: "An example",
+      tags: ["example"],
+      outcome: "success",
+    });
+    const recalled = await server.getHandler("recall_skills")({
+      query: "example",
+      limit: 5,
+    });
+    expect(parseResult(recalled).matches).toHaveLength(1);
+    expect(parseResult(recalled).matches[0].name).toBe("example-skill");
+  });
+
+  // Add a happy-path and a failure-path test for every new tool.
+});
+`,
+
   "src/index.ts": `import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ${className} } from "./${className}.js";

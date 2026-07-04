@@ -197,7 +197,10 @@ export class BotManager {
         port: this.config.port,
         username: this.config.username,
         version: this.config.version,
-        hideErrors: false,
+        // minecraft-protocol prints connection errors to STDOUT when
+        // hideErrors is false, corrupting the MCP JSON-RPC stream. We log
+        // errors ourselves (to stderr) via the error/end handlers below.
+        hideErrors: true,
       });
 
       this.bot.loadPlugin(pathfinder);

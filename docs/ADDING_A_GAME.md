@@ -24,9 +24,22 @@ npm run build
 
 This scaffolds `packages/<game-name>/` with a compiling, bootable MCP server:
 a `<Game>Manager` wired to all core primitives, `get_status` /
-`save_skill` / `recall_skills` tools, persistence, and graceful shutdown.
-The skill library works from day one — the agent starts learning your game
-before you've written a single game-specific tool.
+`save_skill` / `recall_skills` tools, persistence, starter tests showing the
+mock-server pattern, and graceful shutdown. The skill library works from day
+one — the agent starts learning your game before you've written a single
+game-specific tool.
+
+After every change, run the conformance checker — it verifies the
+conventions below mechanically (package shape, stdout hygiene, tool
+annotations, response envelopes, build, and a live MCP initialize
+handshake against your built server):
+
+```bash
+node scripts/validate-game.mjs <game-name>
+```
+
+Fix every ERROR before committing; treat WARNINGs as errors unless you can
+say precisely why they don't apply.
 
 ## Then make it real
 
