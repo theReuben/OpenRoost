@@ -9,14 +9,14 @@ MCP servers enabling Claude to play videogames as a cooperative AI player. Start
   - Vanilla server ([download](https://www.minecraft.net/en-us/download/server))
   - [Paper](https://papermc.io/) or [Spigot](https://www.spigotmc.org/)
   - A Minecraft hosting provider
-- Server version **1.8 – 1.20.4** (Mineflayer compatibility)
+- Server version **1.8.8 – 1.21.11** (Mineflayer compatibility)
 
 ## Architecture
 
 ```
 packages/
 ├── core/        → @openroost/core — shared EventManager, TaskManager, base types
-└── minecraft/   → @openroost/minecraft — Mineflayer bot + 22 MCP tools
+└── minecraft/   → @openroost/minecraft — Mineflayer bot + 30 MCP tools
 ```
 
 ## Getting Started
@@ -35,7 +35,7 @@ npm run build
 If you don't already have one running, here's the quickest way:
 
 ```bash
-# Download the vanilla server jar (example for 1.20.4)
+# Download the vanilla server jar (example for 1.21.x)
 mkdir mc-server && cd mc-server
 # Download server.jar from https://www.minecraft.net/en-us/download/server
 java -jar server.jar --nogui
@@ -62,7 +62,7 @@ After changing `server.properties`, restart the server.
 npm start -w packages/minecraft
 
 # Custom settings via environment variables
-MC_HOST=192.168.1.50 MC_PORT=25565 MC_USERNAME=MyBot MC_VERSION=1.20.4 npm start -w packages/minecraft
+MC_HOST=192.168.1.50 MC_PORT=25565 MC_USERNAME=MyBot MC_VERSION=1.21.4 npm start -w packages/minecraft
 ```
 
 ### 4. Configure Claude
@@ -109,7 +109,7 @@ Add to your `.mcp.json` in the project root or `~/.claude/mcp.json` globally:
 
 ### 5. Play
 
-Once connected, Claude has access to 22 tools. Open a conversation and try:
+Once connected, Claude has access to 30 tools. Open a conversation and try:
 
 > "Look around and tell me what you see."
 > "Follow me and help me mine some iron."
@@ -124,7 +124,7 @@ Claude will call `get_observation` to orient itself, use `go_to` and `mine_block
 | `MC_HOST` | `127.0.0.1` | Minecraft server hostname or IP |
 | `MC_PORT` | `25565` | Minecraft server port |
 | `MC_USERNAME` | `ClaudeBot` | Bot's in-game username |
-| `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.20.4`) |
+| `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.21.4`) |
 
 ## Development
 
@@ -136,7 +136,7 @@ npm run build
 npm run build:core
 npm run build:minecraft
 
-# Run tests (90 tests across core + minecraft)
+# Run tests (176 tests across core + minecraft)
 npm test
 
 # Watch mode for development
@@ -156,7 +156,8 @@ npm run clean
 | `look_at` | Look in a direction/position, describe what's visible |
 | `scan_area` | Scan larger area for specific block types |
 | `get_recipe` | Look up crafting recipes via minecraft-data |
-| `get_events` | Retrieve recent events (damage, chat, deaths) |
+| `get_events` | Retrieve recent events (damage, chat, deaths, sounds) |
+| `get_time_weather` | Time of day, weather, moon phase, phantom risk |
 
 ### Layer 2 — Movement & Navigation
 | Tool | Description |
@@ -200,6 +201,18 @@ npm run clean
 | `get_task_status` | Poll async task progress |
 | `cancel_task` | Cancel any running async task |
 | `get_death_history` | Recent death locations for item recovery |
+| `recall_containers` | Remember contents of chests opened before (decays over time) |
+| `sleep` | Sleep in a nearby bed to skip night and reset the phantom timer |
+
+### Layer 8 — Learning (Voyager-style skill library)
+| Tool | Description |
+|------|-------------|
+| `save_skill` | Record a strategy that worked (or failed) with tags and outcome |
+| `recall_skills` | Retrieve relevant learned strategies before starting a task |
+
+Skills persist across sessions in `openroost-state.json`. Each save records a
+success/failure outcome, so strategies that keep working rank above ones that
+don't — the bot genuinely gets better the more you play with it.
 
 ## Troubleshooting
 
@@ -213,7 +226,7 @@ The bot can't reach the Minecraft server. Check that:
 Set `online-mode=false` in your `server.properties` and restart the server. The bot connects in offline/cracked mode since it doesn't have a Minecraft account.
 
 ### "Version mismatch" or the bot connects but immediately disconnects
-Set the `MC_VERSION` environment variable to match your server's exact version (e.g. `MC_VERSION=1.20.4`). Run `/version` on the server console to check.
+Set the `MC_VERSION` environment variable to match your server's exact version (e.g. `MC_VERSION=1.21.4`). Run `/version` on the server console to check.
 
 ### Bot connects but doesn't respond to tools
 Make sure you built after installing: `npm run build`. The MCP server runs the compiled JavaScript from `build/`, not the TypeScript source.
