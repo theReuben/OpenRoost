@@ -16,7 +16,7 @@ MCP servers enabling Claude to play videogames as a cooperative AI player. Start
 ```
 packages/
 ├── core/        → @openroost/core — shared EventManager, TaskManager, base types
-└── minecraft/   → @openroost/minecraft — Mineflayer bot + 30 MCP tools
+└── minecraft/   → @openroost/minecraft — Mineflayer bot + 35 MCP tools
 ```
 
 ## Getting Started
@@ -109,7 +109,7 @@ Add to your `.mcp.json` in the project root or `~/.claude/mcp.json` globally:
 
 ### 5. Play
 
-Once connected, Claude has access to 30 tools. Open a conversation and try:
+Once connected, Claude has access to 35 tools. Open a conversation and try:
 
 > "Look around and tell me what you see."
 > "Follow me and help me mine some iron."
@@ -136,7 +136,7 @@ npm run build
 npm run build:core
 npm run build:minecraft
 
-# Run tests (176 tests across core + minecraft)
+# Run tests (193 tests across core + minecraft)
 npm test
 
 # Watch mode for development
@@ -213,6 +213,18 @@ npm run clean
 Skills persist across sessions in `openroost-state.json`. Each save records a
 success/failure outcome, so strategies that keep working rank above ones that
 don't — the bot genuinely gets better the more you play with it.
+
+### Layer 9 — Episodic Memory & Attentive Idling
+| Tool | Description |
+|------|-------------|
+| `save_waypoint` | Remember a named place (defaults to current position); persists across sessions |
+| `list_waypoints` | All saved places, sorted by distance from the bot |
+| `write_journal` | Record the current project/agreements for future sessions |
+| `read_journal` | Catch up on what past sessions were doing |
+| `wait_for_events` | Block until something urgent happens (chat, damage, threat) — attentive idling without polling |
+
+`go_to` accepts waypoint names (`waypoint: "home"`), so "go home" works the
+way you'd hope.
 
 ## Troubleshooting
 

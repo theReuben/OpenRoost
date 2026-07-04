@@ -58,6 +58,17 @@ Never act blind. Call get_observation before making decisions.
 - Reuse skill names when refining a strategy — outcomes accumulate into a success rate that ranks proven skills higher
 - Skills persist across sessions; this is how you get better over time
 
+### Memory (waypoints & journal)
+- At session start: read_journal and list_waypoints to pick up where you left off
+- save_waypoint at every important place — home, mine entrance, farms, the player's build. Coordinates default to where you stand
+- go_to accepts waypoint names: go_to with waypoint="home"
+- write_journal whenever the situation changes meaningfully (new project, agreement with a player, base progress) — your future self starts with zero context
+
+### Idling (wait_for_events)
+- When you have nothing to do but should stay responsive (accompanying a player, guarding), call wait_for_events instead of polling — it blocks until something urgent happens (chat, damage, threat) or times out
+- After it returns: react to urgentEvents if any, otherwise re-assess and either act or wait again
+- Don't wait_for_events while an async task of yours needs monitoring — poll get_task_status instead
+
 ### Resource Streams
 - Subscribe to minecraft://time-weather for automatic day/night and weather updates
 - Subscribe to minecraft://inventory for slot change notifications

@@ -1,5 +1,5 @@
 import { JsonStore, Position } from "@openroost/core";
-import type { Skill } from "@openroost/core";
+import type { Skill, Waypoint, JournalEntry } from "@openroost/core";
 import type { DeathRecord } from "./BotManager.js";
 
 /** Shape of the persisted state file. */
@@ -22,6 +22,12 @@ export interface PersistedState {
   /** Learned skills (Voyager-style skill library). */
   skills: Skill[];
 
+  /** Named locations (episodic memory). */
+  waypoints: Waypoint[];
+
+  /** Session journal (episodic memory). */
+  journal: JournalEntry[];
+
   /** Saved at timestamp. */
   savedAt: string;
 }
@@ -32,6 +38,8 @@ function defaultState(): PersistedState {
     deaths: [],
     lastSleepTick: -1,
     skills: [],
+    waypoints: [],
+    journal: [],
     savedAt: new Date().toISOString(),
   };
 }
@@ -41,6 +49,8 @@ function validateState(parsed: PersistedState): PersistedState {
   if (!Array.isArray(parsed.deaths)) parsed.deaths = [];
   if (typeof parsed.lastSleepTick !== "number") parsed.lastSleepTick = -1;
   if (!Array.isArray(parsed.skills)) parsed.skills = [];
+  if (!Array.isArray(parsed.waypoints)) parsed.waypoints = [];
+  if (!Array.isArray(parsed.journal)) parsed.journal = [];
   return parsed;
 }
 

@@ -45,6 +45,7 @@ export class EventManager {
   private queue: QueuedEvent[] = [];
   private lastDrainTick = 0;
   private maxQueueSize = 200;
+  private urgentWaiters: Array<() => void> = [];
 
   push(event: GameEvent, priority?: EventPriority): void {
     const p = priority ?? DEFAULT_PRIORITIES[event.type] ?? "normal";
@@ -55,6 +56,39 @@ export class EventManager {
       this.queue.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
       this.queue = this.queue.slice(0, this.maxQueueSize);
     }
+
+    // Wake anyone blocked in waitForUrgent()
+    if (p === "critical" || p === "high") {
+      const waiters = this.urgentWaiters;
+      this.urgentWaiters = [];
+      for (const wake of waiters) wake();
+    }
+  }
+
+  /**
+   * Long-poll for urgent events: resolves as soon as a critical/high event
+   * is pushed (or immediately if one is already queued), or with `false`
+   * when the timeout elapses. Events themselves are NOT drained here —
+   * the caller's response path drains them via wrapResponse as usual.
+   */
+  waitForUrgent(timeoutMs: number): Promise<boolean> {
+    const hasUrgent = () =>
+      this.queue.some(
+        (q) => q.priority === "critical" || q.priority === "high"
+      );
+    if (hasUrgent()) return Promise.resolve(true);
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.urgentWaiters = this.urgentWaiters.filter((w) => w !== wake);
+        resolve(false);
+      }, timeoutMs);
+      const wake = () => {
+        clearTimeout(timer);
+        resolve(true);
+      };
+      this.urgentWaiters.push(wake);
+    });
   }
 
   /**

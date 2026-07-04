@@ -4,6 +4,7 @@ import {
   EventManager,
   TaskManager,
   SkillLibrary,
+  GameMemory,
   ObservationSnapshot,
   BlockInfo,
   EntityInfo,
@@ -110,6 +111,9 @@ export class BotManager {
   /** Library of learned strategies, persisted across sessions. */
   skills = new SkillLibrary();
 
+  /** Episodic memory: waypoints and session journal, persisted across sessions. */
+  memory = new GameMemory();
+
   /** Tick when the bot last slept in a bed. -1 means never slept. */
   lastSleepTick = -1;
   /** Whether it is currently nighttime. */
@@ -159,8 +163,9 @@ export class BotManager {
     this.lastSleepTick = state.lastSleepTick;
     this.containerMemory.importRecords(state.containers);
     this.skills.importSkills(state.skills);
+    this.memory.importMemory({ waypoints: state.waypoints, journal: state.journal });
     console.error(
-      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths, ${state.skills.length} skills`
+      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths, ${state.skills.length} skills, ${state.waypoints.length} waypoints, ${state.journal.length} journal entries`
     );
   }
 
@@ -171,6 +176,8 @@ export class BotManager {
       deaths: this.deathHistory,
       lastSleepTick: this.lastSleepTick,
       skills: this.skills.exportSkills(),
+      waypoints: this.memory.exportMemory().waypoints,
+      journal: this.memory.exportMemory().journal,
       savedAt: new Date().toISOString(),
     };
     this.persistence.save(state);

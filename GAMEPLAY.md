@@ -93,8 +93,23 @@ Resources are available for live state without tool calls:
 - `minecraft://nearby-players` — who's around
 - `minecraft://events` — recent happenings
 - `minecraft://skills` — strategies learned in past sessions
+- `minecraft://memory` — saved waypoints and session journal
 
 Use these to stay aware without spending tool calls.
+
+## Session Startup Ritual
+
+At the start of every session, orient yourself before acting:
+
+1. `read_journal` — what were we working on? Any agreements with players?
+2. `list_waypoints` — where is home, storage, the current project?
+3. `get_observation` — where am I now, and what state am I in?
+
+## Places and Projects (episodic memory)
+
+- **Save waypoints eagerly** — home, mine entrances, farms, villages, the player's build site. Stand there and call `save_waypoint` (coordinates default to your position). `go_to` accepts waypoint names directly.
+- **Keep the journal current** — `write_journal` when a project starts, changes, or finishes, and when you agree on something with a player. Entries persist across sessions; your future self depends on them.
+- **Idle attentively** — when you're keeping a player company with nothing to do, call `wait_for_events` rather than spamming observations. You'll wake instantly when they speak or danger arrives.
 
 ## Learning Across Sessions
 

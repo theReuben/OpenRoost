@@ -9,19 +9,50 @@ export function registerGoTo(server: McpServer, bot: BotManager): void {
     {
       title: "Go To",
       description:
-        "Navigate to a target position using pathfinding. Returns a task ID for tracking.",
+        "Navigate to a target position using pathfinding. Give either coordinates or " +
+        "a saved waypoint name. Returns a task ID for tracking.",
       inputSchema:
       {
-        x: z.number().describe("Target X coordinate"),
-        y: z.number().describe("Target Y coordinate"),
-        z: z.number().describe("Target Z coordinate"),
+        x: z.number().optional().describe("Target X coordinate"),
+        y: z.number().optional().describe("Target Y coordinate"),
+        z: z.number().optional().describe("Target Z coordinate"),
+        waypoint: z
+          .string()
+          .optional()
+          .describe('Saved waypoint name to navigate to (e.g. "home")'),
         sprint: z.boolean().default(true).describe("Whether to sprint"),
         range: z.number().default(1).describe("Acceptable distance from target"),
       },
       annotations: { destructiveHint: false },
     },
-    async ({ x, y, z: zCoord, sprint, range }) => {
+    async ({ x, y, z: zCoord, waypoint, sprint, range }) => {
       try {
+        if (waypoint !== undefined) {
+          const wp = bot.memory.getWaypoint(waypoint);
+          if (!wp) {
+            const known = bot.memory
+              .listWaypoints()
+              .map((w) => w.name)
+              .join(", ");
+            return toolResult(
+              errorResponse(
+                `Unknown waypoint "${waypoint}". Known waypoints: ${known || "(none)"}`,
+                bot.events
+              )
+            );
+          }
+          x = wp.position.x;
+          y = wp.position.y;
+          zCoord = wp.position.z;
+        }
+        if (x === undefined || y === undefined || zCoord === undefined) {
+          return toolResult(
+            errorResponse(
+              "Provide either x/y/z coordinates or a waypoint name",
+              bot.events
+            )
+          );
+        }
         const movements = bot.getMovements();
         movements.allowSprinting = sprint;
         bot.bot.pathfinder.setMovements(movements);

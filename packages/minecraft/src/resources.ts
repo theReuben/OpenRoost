@@ -107,6 +107,29 @@ export function registerResources(server: McpServer, bot: BotManager): void {
     })
   );
 
+  // ── minecraft://memory ──
+  server.registerResource(
+    "Episodic Memory",
+    "minecraft://memory",
+    { description: "Saved waypoints and session journal from this and past sessions" },
+    async () => ({
+      contents: [
+        {
+          uri: "minecraft://memory",
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              waypoints: bot.memory.listWaypoints(),
+              journal: bot.memory.recentJournal(20),
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
   // ── minecraft://events ──
   server.registerResource(
     "Recent Events",
