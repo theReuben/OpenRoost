@@ -85,9 +85,13 @@ Never act blind. Call get_observation before making decisions.
  * Register MCP prompts the client can invoke to get gameplay context.
  */
 export function registerPrompts(server: McpServer): void {
-  server.prompt(
+  server.registerPrompt(
     "gameplay-guide",
-    "System prompt for cooperative Minecraft gameplay — teaches Claude how to use tools effectively, survive, and cooperate with players",
+    {
+      title: "Gameplay Guide",
+      description:
+        "System prompt for cooperative Minecraft gameplay — teaches Claude how to use tools effectively, survive, and cooperate with players",
+    },
     () => ({
       messages: [
         {

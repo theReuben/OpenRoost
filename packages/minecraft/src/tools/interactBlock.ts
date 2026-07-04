@@ -4,13 +4,19 @@ import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerInteractBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "interact_block",
-    "Interact with a block (open chest, press button, use furnace, open door).",
     {
-      x: z.number().describe("Block X coordinate"),
-      y: z.number().describe("Block Y coordinate"),
-      z: z.number().describe("Block Z coordinate"),
+      title: "Interact With Block",
+      description:
+        "Interact with a block (open chest, press button, use furnace, open door).",
+      inputSchema:
+      {
+        x: z.number().describe("Block X coordinate"),
+        y: z.number().describe("Block Y coordinate"),
+        z: z.number().describe("Block Z coordinate"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ x, y, z: zCoord }) => {
       try {

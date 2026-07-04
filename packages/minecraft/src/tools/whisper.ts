@@ -4,12 +4,18 @@ import { wrapResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerWhisper(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "whisper",
-    "Send a private message to a specific player via /msg.",
     {
-      playerName: z.string().describe("Recipient player name"),
-      message: z.string().describe("Message content"),
+      title: "Whisper",
+      description:
+        "Send a private message to a specific player via /msg.",
+      inputSchema:
+      {
+        playerName: z.string().describe("Recipient player name"),
+        message: z.string().describe("Message content"),
+      },
+      annotations: { destructiveHint: false, openWorldHint: true },
     },
     async ({ playerName, message }) => {
       bot.bot.chat(`/msg ${playerName} ${message}`);

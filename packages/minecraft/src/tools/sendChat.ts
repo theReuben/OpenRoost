@@ -4,11 +4,17 @@ import { wrapResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSendChat(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "send_chat",
-    "Send a message in game chat",
     {
-      message: z.string().describe("Message to send"),
+      title: "Send Chat",
+      description:
+        "Send a message in game chat",
+      inputSchema:
+      {
+        message: z.string().describe("Message to send"),
+      },
+      annotations: { destructiveHint: false, openWorldHint: true },
     },
     async ({ message }) => {
       bot.bot.chat(message);

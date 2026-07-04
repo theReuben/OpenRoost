@@ -4,11 +4,17 @@ import { wrapResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetTaskStatus(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_task_status",
-    "Check the status of an async task (pathfinding, combat, smelting, etc.)",
     {
-      taskId: z.string().describe("Task ID from a previous action"),
+      title: "Get Task Status",
+      description:
+        "Check the status of an async task (pathfinding, combat, smelting, etc.)",
+      inputSchema:
+      {
+        taskId: z.string().describe("Task ID from a previous action"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ taskId }) => {
       const task = bot.tasks.get(taskId);

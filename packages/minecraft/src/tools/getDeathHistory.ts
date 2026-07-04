@@ -4,11 +4,17 @@ import { wrapResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetDeathHistory(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_death_history",
-    "Get recent death locations. Use this to navigate back and recover dropped items.",
     {
-      limit: z.number().default(5).describe("Number of recent deaths to return"),
+      title: "Get Death History",
+      description:
+        "Get recent death locations. Use this to navigate back and recover dropped items.",
+      inputSchema:
+      {
+        limit: z.number().default(5).describe("Number of recent deaths to return"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ limit }) => {
       const deaths = bot.deathHistory.slice(0, limit).map((d) => ({

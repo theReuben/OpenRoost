@@ -8,7 +8,7 @@ type ResourceCallback = (uri: URL) => Promise<any>;
 function createMockServer() {
   const resources = new Map<string, ResourceCallback>();
   return {
-    resource: vi.fn(
+    registerResource: vi.fn(
       (name: string, uri: string, _meta: any, callback: ResourceCallback) => {
         resources.set(uri, callback);
       }
@@ -132,8 +132,8 @@ describe("MCP Resources", () => {
   });
 
   it("registers all 6 resources", () => {
-    expect(server.resource).toHaveBeenCalledTimes(6);
-    const uris = server.resource.mock.calls.map((c: any) => c[1]);
+    expect(server.registerResource).toHaveBeenCalledTimes(6);
+    const uris = server.registerResource.mock.calls.map((c: any) => c[1]);
     expect(uris).toContain("minecraft://status");
     expect(uris).toContain("minecraft://inventory");
     expect(uris).toContain("minecraft://position");

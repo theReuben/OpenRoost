@@ -48,15 +48,21 @@ const HOSTILE_MOBS = [
 ];
 
 export function registerDefend(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "defend",
-    "Enter defensive mode — auto-attack hostile mobs within range. Returns a task ID for tracking.",
     {
-      radius: z.number().default(8).describe("Detection radius for hostile mobs"),
-      fleeHealthThreshold: z
-        .number()
-        .default(4)
-        .describe("Health level at which to flee instead of fight"),
+      title: "Defend",
+      description:
+        "Enter defensive mode — auto-attack hostile mobs within range. Returns a task ID for tracking.",
+      inputSchema:
+      {
+        radius: z.number().default(8).describe("Detection radius for hostile mobs"),
+        fleeHealthThreshold: z
+          .number()
+          .default(4)
+          .describe("Health level at which to flee instead of fight"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ radius, fleeHealthThreshold }) => {
       try {

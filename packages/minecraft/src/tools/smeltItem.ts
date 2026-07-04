@@ -4,16 +4,22 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSmeltItem(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "smelt_item",
-    "Place items in a nearby furnace for smelting. Returns a task ID (smelting takes time).",
     {
-      item: z.string().describe("Item to smelt"),
-      fuel: z.string().describe('Fuel to use (e.g. "coal")'),
-      count: z.number().default(1).describe("Number of items to smelt"),
-      furnaceX: z.number().describe("Furnace X coordinate"),
-      furnaceY: z.number().describe("Furnace Y coordinate"),
-      furnaceZ: z.number().describe("Furnace Z coordinate"),
+      title: "Smelt Item",
+      description:
+        "Place items in a nearby furnace for smelting. Returns a task ID (smelting takes time).",
+      inputSchema:
+      {
+        item: z.string().describe("Item to smelt"),
+        fuel: z.string().describe('Fuel to use (e.g. "coal")'),
+        count: z.number().default(1).describe("Number of items to smelt"),
+        furnaceX: z.number().describe("Furnace X coordinate"),
+        furnaceY: z.number().describe("Furnace Y coordinate"),
+        furnaceZ: z.number().describe("Furnace Z coordinate"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ item, fuel, count, furnaceX, furnaceY, furnaceZ }) => {
       try {

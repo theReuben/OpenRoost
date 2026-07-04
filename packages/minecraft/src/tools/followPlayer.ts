@@ -4,12 +4,18 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerFollowPlayer(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "follow_player",
-    "Follow a specific player, maintaining distance. Returns a task ID (continuous until cancelled).",
     {
-      playerName: z.string().describe("Player to follow"),
-      distance: z.number().default(3).describe("Distance to maintain from the player"),
+      title: "Follow Player",
+      description:
+        "Follow a specific player, maintaining distance. Returns a task ID (continuous until cancelled).",
+      inputSchema:
+      {
+        playerName: z.string().describe("Player to follow"),
+        distance: z.number().default(3).describe("Distance to maintain from the player"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ playerName, distance }) => {
       try {

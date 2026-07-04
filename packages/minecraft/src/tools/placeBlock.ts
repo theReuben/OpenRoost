@@ -13,18 +13,24 @@ const FACE_VECTORS: Record<string, { x: number; y: number; z: number }> = {
 };
 
 export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "place_block",
-    "Place a block from inventory at a position.",
     {
-      blockName: z.string().describe("Name of the block to place"),
-      x: z.number().describe("Target X coordinate"),
-      y: z.number().describe("Target Y coordinate"),
-      z: z.number().describe("Target Z coordinate"),
-      face: z
-        .enum(["top", "bottom", "north", "south", "east", "west"])
-        .default("top")
-        .describe("Which face of the adjacent block to place against"),
+      title: "Place Block",
+      description:
+        "Place a block from inventory at a position.",
+      inputSchema:
+      {
+        blockName: z.string().describe("Name of the block to place"),
+        x: z.number().describe("Target X coordinate"),
+        y: z.number().describe("Target Y coordinate"),
+        z: z.number().describe("Target Z coordinate"),
+        face: z
+          .enum(["top", "bottom", "north", "south", "east", "west"])
+          .default("top")
+          .describe("Which face of the adjacent block to place against"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ blockName, x, y, z: zCoord, face }) => {
       try {

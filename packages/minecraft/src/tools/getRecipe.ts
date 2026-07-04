@@ -5,11 +5,17 @@ import { BotManager } from "../BotManager.js";
 import minecraftData from "minecraft-data";
 
 export function registerGetRecipe(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_recipe",
-    "Look up the crafting recipe for an item.",
     {
-      item: z.string().describe('Item name, e.g. "diamond_pickaxe"'),
+      title: "Get Recipe",
+      description:
+        "Look up the crafting recipe for an item.",
+      inputSchema:
+      {
+        item: z.string().describe('Item name, e.g. "diamond_pickaxe"'),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ item }) => {
       try {

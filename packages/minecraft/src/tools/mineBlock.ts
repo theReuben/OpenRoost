@@ -4,13 +4,19 @@ import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerMineBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "mine_block",
-    "Mine/break the block at a specific position. Auto-selects the best tool from inventory.",
     {
-      x: z.number().describe("Block X coordinate"),
-      y: z.number().describe("Block Y coordinate"),
-      z: z.number().describe("Block Z coordinate"),
+      title: "Mine Block",
+      description:
+        "Mine/break the block at a specific position. Auto-selects the best tool from inventory.",
+      inputSchema:
+      {
+        x: z.number().describe("Block X coordinate"),
+        y: z.number().describe("Block Y coordinate"),
+        z: z.number().describe("Block Z coordinate"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ x, y, z: zCoord }) => {
       try {

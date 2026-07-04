@@ -4,15 +4,21 @@ import { wrapResponse, errorResponse, BlockInfo } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerScanArea(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "scan_area",
-    "Scan a larger area for visible block types (blocks must have an exposed face — no x-ray vision).",
     {
-      radius: z.number().min(4).max(32).describe("Scan radius (4-32 blocks)"),
-      blockTypes: z
-        .array(z.string())
-        .optional()
-        .describe("Optional list of block names to filter for"),
+      title: "Scan Area",
+      description:
+        "Scan a larger area for visible block types (blocks must have an exposed face — no x-ray vision).",
+      inputSchema:
+      {
+        radius: z.number().min(4).max(32).describe("Scan radius (4-32 blocks)"),
+        blockTypes: z
+          .array(z.string())
+          .optional()
+          .describe("Optional list of block names to filter for"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ radius, blockTypes }) => {
       try {

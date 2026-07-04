@@ -4,13 +4,19 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerAttackEntity(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "attack_entity",
-    "Attack a specific entity (mob, animal, or player). Returns a task ID for tracking.",
     {
-      target: z.string().describe("Entity name or type to attack"),
-      weapon: z.string().optional().describe("Weapon to equip before attacking"),
-      pursuit: z.boolean().default(true).describe("Whether to chase the target if it moves"),
+      title: "Attack Entity",
+      description:
+        "Attack a specific entity (mob, animal, or player). Returns a task ID for tracking.",
+      inputSchema:
+      {
+        target: z.string().describe("Entity name or type to attack"),
+        weapon: z.string().optional().describe("Weapon to equip before attacking"),
+        pursuit: z.boolean().default(true).describe("Whether to chase the target if it moves"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ target, weapon, pursuit }) => {
       try {

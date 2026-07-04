@@ -4,16 +4,22 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerCraftItem(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "craft_item",
-    "Craft an item using materials in inventory.",
     {
-      item: z.string().describe("Item name to craft"),
-      count: z.number().default(1).describe("Number of times to craft"),
-      useCraftingTable: z
-        .boolean()
-        .default(false)
-        .describe("Whether to use a nearby crafting table"),
+      title: "Craft Item",
+      description:
+        "Craft an item using materials in inventory.",
+      inputSchema:
+      {
+        item: z.string().describe("Item name to craft"),
+        count: z.number().default(1).describe("Number of times to craft"),
+        useCraftingTable: z
+          .boolean()
+          .default(false)
+          .describe("Whether to use a nearby crafting table"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ item, count, useCraftingTable }) => {
       try {

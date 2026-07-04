@@ -4,22 +4,28 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerUseItem(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "use_item",
-    "Use the specified item (eat food, throw ender pearl, etc.). Optionally target a position or entity.",
     {
-      itemName: z.string().describe("Name of the item to use"),
-      target: z
-        .union([
-          z.object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
-          }),
-          z.string(),
-        ])
-        .optional()
-        .describe("Target position {x,y,z} or entity name string"),
+      title: "Use Item",
+      description:
+        "Use the specified item (eat food, throw ender pearl, etc.). Optionally target a position or entity.",
+      inputSchema:
+      {
+        itemName: z.string().describe("Name of the item to use"),
+        target: z
+          .union([
+            z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }),
+            z.string(),
+          ])
+          .optional()
+          .describe("Target position {x,y,z} or entity name string"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ itemName, target }) => {
       try {

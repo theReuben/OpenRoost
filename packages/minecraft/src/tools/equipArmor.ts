@@ -27,14 +27,20 @@ const SLOT_CONFIG: Record<ArmorSlot, { destination: string; patterns: string[] }
 };
 
 export function registerEquipArmor(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "equip_armor",
-    "Equip the best available armor from inventory. Optionally target a specific slot.",
     {
-      slot: z
-        .enum(["head", "chest", "legs", "feet"])
-        .optional()
-        .describe("Specific armor slot to equip. Omit to equip all slots."),
+      title: "Equip Armor",
+      description:
+        "Equip the best available armor from inventory. Optionally target a specific slot.",
+      inputSchema:
+      {
+        slot: z
+          .enum(["head", "chest", "legs", "feet"])
+          .optional()
+          .describe("Specific armor slot to equip. Omit to equip all slots."),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
     },
     async ({ slot }) => {
       try {

@@ -4,11 +4,17 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetPlayerInfo(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_player_info",
-    "Get information about a specific online player.",
     {
-      playerName: z.string().describe("Player to look up"),
+      title: "Get Player Info",
+      description:
+        "Get information about a specific online player.",
+      inputSchema:
+      {
+        playerName: z.string().describe("Player to look up"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ playerName }) => {
       try {

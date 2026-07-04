@@ -29,20 +29,26 @@ interface DistanceLayer {
 }
 
 export function registerLookAt(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "look_at",
-    "Look in a direction or at a position. Returns what's directly ahead (ray-cast), blocks and entities in the view cone grouped by distance, and a natural language summary.",
     {
-      target: z
-        .union([
-          z.object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
-          }),
-          z.enum(["north", "south", "east", "west", "up", "down"]),
-        ])
-        .describe("Position {x,y,z} or cardinal direction to look at"),
+      title: "Look At",
+      description:
+        "Look in a direction or at a position. Returns what's directly ahead (ray-cast), blocks and entities in the view cone grouped by distance, and a natural language summary.",
+      inputSchema:
+      {
+        target: z
+          .union([
+            z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }),
+            z.enum(["north", "south", "east", "west", "up", "down"]),
+          ])
+          .describe("Position {x,y,z} or cardinal direction to look at"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ target }) => {
       try {

@@ -4,15 +4,21 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGoTo(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "go_to",
-    "Navigate to a target position using pathfinding. Returns a task ID for tracking.",
     {
-      x: z.number().describe("Target X coordinate"),
-      y: z.number().describe("Target Y coordinate"),
-      z: z.number().describe("Target Z coordinate"),
-      sprint: z.boolean().default(true).describe("Whether to sprint"),
-      range: z.number().default(1).describe("Acceptable distance from target"),
+      title: "Go To",
+      description:
+        "Navigate to a target position using pathfinding. Returns a task ID for tracking.",
+      inputSchema:
+      {
+        x: z.number().describe("Target X coordinate"),
+        y: z.number().describe("Target Y coordinate"),
+        z: z.number().describe("Target Z coordinate"),
+        sprint: z.boolean().default(true).describe("Whether to sprint"),
+        range: z.number().default(1).describe("Acceptable distance from target"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ x, y, z: zCoord, sprint, range }) => {
       try {

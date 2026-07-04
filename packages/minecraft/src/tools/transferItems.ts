@@ -4,20 +4,26 @@ import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerTransferItems(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "transfer_items",
-    "Move items between inventory and a container (chest, furnace, etc.).",
     {
-      containerX: z.number().describe("Container block X coordinate"),
-      containerY: z.number().describe("Container block Y coordinate"),
-      containerZ: z.number().describe("Container block Z coordinate"),
-      items: z.array(
-        z.object({
-          name: z.string().describe("Item name"),
-          count: z.number().describe("Number to transfer"),
-        })
-      ).describe("Items to transfer"),
-      direction: z.enum(["deposit", "withdraw"]).describe("Direction of transfer"),
+      title: "Transfer Items",
+      description:
+        "Move items between inventory and a container (chest, furnace, etc.).",
+      inputSchema:
+      {
+        containerX: z.number().describe("Container block X coordinate"),
+        containerY: z.number().describe("Container block Y coordinate"),
+        containerZ: z.number().describe("Container block Z coordinate"),
+        items: z.array(
+          z.object({
+            name: z.string().describe("Item name"),
+            count: z.number().describe("Number to transfer"),
+          })
+        ).describe("Items to transfer"),
+        direction: z.enum(["deposit", "withdraw"]).describe("Direction of transfer"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ containerX, containerY, containerZ, items, direction }) => {
       try {

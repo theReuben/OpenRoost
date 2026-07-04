@@ -3,10 +3,16 @@ import { wrapResponse, ItemStack } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerCheckInventory(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "check_inventory",
-    "List all items in inventory, including equipped armor and held item",
-    {},
+    {
+      title: "Check Inventory",
+      description:
+        "List all items in inventory, including equipped armor and held item",
+      inputSchema:
+      {},
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       const items = bot.getInventoryItems();
 

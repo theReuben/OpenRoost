@@ -4,12 +4,18 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSleep(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "sleep",
-    "Sleep in a nearby bed. Only works at night or during thunderstorms. Sleeping resets the phantom spawn timer (phantoms appear after 3 nights without sleep). Will search for a bed within the given radius and check for nearby hostiles before sleeping.",
     {
-      radius: z.number().default(16).describe("Search radius for a bed"),
-      forceUnsafe: z.boolean().default(false).describe("Sleep even if hostiles are nearby (risky)"),
+      title: "Sleep",
+      description:
+        "Sleep in a nearby bed. Only works at night or during thunderstorms. Sleeping resets the phantom spawn timer (phantoms appear after 3 nights without sleep). Will search for a bed within the given radius and check for nearby hostiles before sleeping.",
+      inputSchema:
+      {
+        radius: z.number().default(16).describe("Search radius for a bed"),
+        forceUnsafe: z.boolean().default(false).describe("Sleep even if hostiles are nearby (risky)"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ radius, forceUnsafe }) => {
       try {

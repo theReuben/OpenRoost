@@ -8,7 +8,7 @@ import { getTimePhase } from "./timeUtils.js";
  */
 export function registerResources(server: McpServer, bot: BotManager): void {
   // ── minecraft://status ──
-  server.resource(
+  server.registerResource(
     "Bot Status",
     "minecraft://status",
     { description: "Bot connection status, game mode, and difficulty" },
@@ -24,7 +24,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://inventory ──
-  server.resource(
+  server.registerResource(
     "Inventory",
     "minecraft://inventory",
     { description: "Current inventory contents, armor, and held item (subscribable)" },
@@ -40,7 +40,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://position ──
-  server.resource(
+  server.registerResource(
     "Position",
     "minecraft://position",
     { description: "Current coordinates and facing direction" },
@@ -56,7 +56,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://nearby-players ──
-  server.resource(
+  server.registerResource(
     "Nearby Players",
     "minecraft://nearby-players",
     { description: "List of online players with positions" },
@@ -72,7 +72,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://time-weather ──
-  server.resource(
+  server.registerResource(
     "Time & Weather",
     "minecraft://time-weather",
     { description: "Current time of day, weather, moon phase, and sleep/phantom status (subscribable)" },
@@ -88,7 +88,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://events ──
-  server.resource(
+  server.registerResource(
     "Recent Events",
     "minecraft://events",
     { description: "Recent game events (damage, chat, deaths, etc.)" },

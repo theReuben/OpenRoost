@@ -4,10 +4,16 @@ import { BotManager } from "../BotManager.js";
 import { getTimePhase, getMoonPhase } from "../timeUtils.js";
 
 export function registerGetTimeWeather(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_time_weather",
-    "Get current time of day, weather, moon phase, and sleep status. Check this before deciding whether to explore, build, or seek shelter. Warns about phantom risk if you haven't slept in 3+ nights.",
-    {},
+    {
+      title: "Get Time & Weather",
+      description:
+        "Get current time of day, weather, moon phase, and sleep status. Check this before deciding whether to explore, build, or seek shelter. Warns about phantom risk if you haven't slept in 3+ nights.",
+      inputSchema:
+      {},
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       const time = bot.bot.time;
       const timeOfDay = time.timeOfDay;

@@ -4,11 +4,17 @@ import { wrapResponse, errorResponse } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerCancelTask(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "cancel_task",
-    "Cancel a running async task (pathfinding, combat, smelting, etc.).",
     {
-      taskId: z.string().describe("Task ID to cancel"),
+      title: "Cancel Task",
+      description:
+        "Cancel a running async task (pathfinding, combat, smelting, etc.).",
+      inputSchema:
+      {
+        taskId: z.string().describe("Task ID to cancel"),
+      },
+      annotations: { destructiveHint: false, idempotentHint: true },
     },
     async ({ taskId }) => {
       const cancelled = bot.tasks.cancel(taskId);
