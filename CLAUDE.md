@@ -44,7 +44,11 @@ node scripts/validate-game.mjs <name>   # conformance-check a game package
    handlers.set). Don't import the real SDK in tests. Copy the pattern from
    any `packages/minecraft/src/__tests__/*.test.ts`.
 6. After changing a game package, run `node scripts/validate-game.mjs <name>`
-   and `npm test`. Both must pass before committing.
+   and `npm test`. Both must pass before committing. CI
+   (`.github/workflows/ci.yml`) enforces both on every push/PR, validates
+   every game package, and scaffolds a throwaway package to prove the
+   generator still produces green output — if you change the scaffolder or
+   validator, that job is your regression test.
 
 ## Adding a game — short version
 

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # canvas (via prismarine-viewer) builds from source when no prebuilt
+      # binary matches the runner.
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libcairo2-dev libpango1.0-dev \
+            libjpeg-dev libgif-dev librsvg2-dev pkg-config
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Validate every game package
+        run: |
+          for dir in packages/*/; do
+            name=$(basename "$dir")
+            [ "$name" = "core" ] && continue
+            echo "::group::validate $name"
+            node scripts/validate-game.mjs "$name"
+            echo "::endgroup::"
+          done
+
+      # The scaffolder must always produce a package that compiles, passes
+      # its generated tests, and survives the validator — with zero edits.
+      - name: Scaffold smoke test
+        run: |
+          node scripts/create-game.mjs ci-smoke
+          npm install
+          npm run build
+          npm test
+          node scripts/validate-game.mjs ci-smoke
