@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerCraftItem(server: McpServer, bot: BotManager): void {
@@ -29,9 +29,7 @@ export function registerCraftItem(server: McpServer, bot: BotManager): void {
         const itemInfo = mcData.itemsByName[item];
         if (!itemInfo) {
           const wrapped = errorResponse(`Unknown item: ${item}`, bot.events);
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const availableRecipes = bot.bot.recipesFor(itemInfo.id, null, 1, useCraftingTable ? null : false);
@@ -40,9 +38,7 @@ export function registerCraftItem(server: McpServer, bot: BotManager): void {
             `No available recipe for ${item}. Check inventory or try useCraftingTable: true`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         let craftingTable = null;
@@ -66,9 +62,7 @@ export function registerCraftItem(server: McpServer, bot: BotManager): void {
               "No crafting table found within 4 blocks",
               bot.events
             );
-            return {
-              content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-            };
+            return toolResult(wrapped);
           }
         }
 
@@ -99,17 +93,13 @@ export function registerCraftItem(server: McpServer, bot: BotManager): void {
           { success: true, crafted, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Crafting failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

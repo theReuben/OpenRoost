@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, ItemStack } from "@openroost/core";
+import { wrapResponse, ItemStack, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerCheckInventory(server: McpServer, bot: BotManager): void {
@@ -34,9 +34,7 @@ export function registerCheckInventory(server: McpServer, bot: BotManager): void
 
       const result = { items, armor, heldItem: held, emptySlots };
       const wrapped = wrapResponse(result, bot.events);
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

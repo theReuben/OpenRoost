@@ -1,7 +1,21 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
+
+/** Zod shape of a stored skill, mirrored from core's Skill interface. */
+export const skillOutputShape = z.object({
+  name: z.string(),
+  description: z.string(),
+  strategy: z.string(),
+  tags: z.array(z.string()),
+  timesUsed: z.number(),
+  successes: z.number(),
+  failures: z.number(),
+  notes: z.array(z.string()),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
 export function registerSaveSkill(server: McpServer, bot: BotManager): void {
   server.registerTool(
@@ -38,6 +52,14 @@ export function registerSaveSkill(server: McpServer, bot: BotManager): void {
           .describe("A lesson learned to append to the skill's notes"),
       },
       annotations: { destructiveHint: false },
+      outputSchema: {
+        result: z.object({
+          success: z.boolean(),
+          skill: skillOutputShape,
+          librarySize: z.number(),
+        }),
+        urgentEvents: z.array(z.record(z.string(), z.unknown())).optional(),
+      },
     },
     async ({ name, description, strategy, tags, outcome, note }) => {
       const skill = bot.skills.save({
@@ -56,9 +78,7 @@ export function registerSaveSkill(server: McpServer, bot: BotManager): void {
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

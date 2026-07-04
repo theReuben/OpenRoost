@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 import { getTimePhase, getMoonPhase } from "../timeUtils.js";
 
@@ -54,9 +54,7 @@ export function registerGetTimeWeather(server: McpServer, bot: BotManager): void
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

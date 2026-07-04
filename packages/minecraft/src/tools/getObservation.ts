@@ -1,5 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetObservation(server: McpServer, bot: BotManager): void {
@@ -16,9 +16,7 @@ export function registerGetObservation(server: McpServer, bot: BotManager): void
     async () => {
       const observation = bot.getObservation();
       const wrapped = wrapResponse(observation, bot.events);
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

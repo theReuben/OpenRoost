@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const FACE_VECTORS: Record<string, { x: number; y: number; z: number }> = {
@@ -43,9 +43,7 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
             `No ${blockName} in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Equip the block
@@ -62,9 +60,7 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
             `No solid reference block at ${referencePos.x}, ${referencePos.y}, ${referencePos.z} to place against`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const faceVector = new Vec3(fv.x, fv.y, fv.z);
@@ -88,17 +84,13 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
           { success: true, placed: blockName, position: { x, y, z: zCoord }, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Block placement failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

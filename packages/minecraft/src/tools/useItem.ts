@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerUseItem(server: McpServer, bot: BotManager): void {
@@ -39,9 +39,7 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
             `Item "${itemName}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Equip the item
@@ -69,9 +67,7 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
               `Target entity "${target}" not found nearby`,
               bot.events
             );
-            return {
-              content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-            };
+            return toolResult(wrapped);
           }
         } else {
           // No target — just activate the item
@@ -83,17 +79,13 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
           { success: true, itemUsed: itemName, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Use item failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

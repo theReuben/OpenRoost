@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, BlockInfo, EntityInfo } from "@openroost/core";
+import { wrapResponse, errorResponse, BlockInfo, EntityInfo, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const DIRECTION_VECTORS: Record<string, { x: number; y: number; z: number }> = {
@@ -106,17 +106,13 @@ export function registerLookAt(server: McpServer, bot: BotManager): void {
           },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Look failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

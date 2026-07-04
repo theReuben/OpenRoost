@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSleep(server: McpServer, bot: BotManager): void {
@@ -26,9 +26,7 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
             `Cannot sleep in ${dimension} — beds explode! Use a respawn anchor in the Nether instead.`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Check if it's time to sleep
@@ -38,9 +36,7 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
             "Cannot sleep right now — it must be night or thundering.",
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Check for nearby hostiles
@@ -52,9 +48,7 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
               `Cannot sleep — ${hostiles.length} hostile mob(s) nearby. Closest: ${closest.name} at ${closest.distance} blocks. Clear hostiles first or use forceUnsafe=true.`,
               bot.events
             );
-            return {
-              content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-            };
+            return toolResult(wrapped);
           }
         }
 
@@ -76,9 +70,7 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
             `No bed found within ${radius} blocks. Craft a bed (3 wool + 3 planks) or increase search radius.`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Navigate close to the bed if needed
@@ -156,17 +148,13 @@ export function registerSleep(server: McpServer, bot: BotManager): void {
           },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Sleep failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

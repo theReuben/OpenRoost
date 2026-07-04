@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 import minecraftData from "minecraft-data";
 
@@ -26,9 +26,7 @@ export function registerGetRecipe(server: McpServer, bot: BotManager): void {
             `Unknown item: ${item}`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const recipes = mcData.recipes[itemInfo.id];
@@ -37,9 +35,7 @@ export function registerGetRecipe(server: McpServer, bot: BotManager): void {
             `No crafting recipes found for ${item}`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const formattedRecipes = recipes.map((recipe: any) => {
@@ -71,17 +67,13 @@ export function registerGetRecipe(server: McpServer, bot: BotManager): void {
         });
 
         const wrapped = wrapResponse({ recipes: formattedRecipes }, bot.events);
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Recipe lookup failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

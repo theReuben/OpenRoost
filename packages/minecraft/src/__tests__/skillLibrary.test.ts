@@ -169,6 +169,8 @@ describe("skill tools", () => {
     expect(parsed.success).toBe(true);
     expect(parsed.librarySize).toBe(1);
     expect(parsed.skill.name).toBe("tower-up-safely");
+    // Structured output mirrors the text payload for typed clients
+    expect(result.structuredContent.result.skill.name).toBe("tower-up-safely");
   });
 
   it("recall_skills returns scored matches for a query", async () => {

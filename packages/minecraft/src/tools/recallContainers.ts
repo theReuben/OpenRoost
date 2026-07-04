@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerRecallContainers(
@@ -65,9 +65,7 @@ export function registerRecallContainers(
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

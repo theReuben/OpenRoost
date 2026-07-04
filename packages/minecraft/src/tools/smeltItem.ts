@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSmeltItem(server: McpServer, bot: BotManager): void {
@@ -31,9 +31,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             "No furnace at that position",
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         let furnaceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -61,9 +59,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             `Item "${item}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         if (!fuelItem) {
@@ -72,9 +68,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             `Fuel "${fuel}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Put fuel and input
@@ -124,17 +118,13 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
           { success: true, taskId, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Smelt failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

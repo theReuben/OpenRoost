@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetTaskStatus(server: McpServer, bot: BotManager): void {
@@ -23,9 +23,7 @@ export function registerGetTaskStatus(server: McpServer, bot: BotManager): void 
           { error: `No task found with ID: ${taskId}` },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
 
       const wrapped = wrapResponse(
@@ -37,9 +35,7 @@ export function registerGetTaskStatus(server: McpServer, bot: BotManager): void 
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

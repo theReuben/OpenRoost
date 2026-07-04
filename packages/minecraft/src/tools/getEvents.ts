@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetEvents(server: McpServer, bot: BotManager): void {
@@ -55,14 +56,9 @@ export function registerGetEvents(server: McpServer, bot: BotManager): void {
         (e) => e.type === "sound_heard" && (e.data.category as string)?.startsWith("danger")
       );
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ events, count: events.length, hasDangerSounds }, null, 2),
-          },
-        ],
-      };
+      return toolResult({
+        result: { events, count: events.length, hasDangerSounds },
+      });
     }
   );
 }

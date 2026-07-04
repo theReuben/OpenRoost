@@ -160,7 +160,7 @@ describe("Minecraft Tools", () => {
       const handler = server.getHandler("get_events");
       const result = await handler({});
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.events).toHaveLength(2);
+      expect(parsed.result.events).toHaveLength(2);
     });
 
     it("returns events since a given tick", async () => {
@@ -170,8 +170,8 @@ describe("Minecraft Tools", () => {
       const handler = server.getHandler("get_events");
       const result = await handler({ since: 10 });
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.events).toHaveLength(1);
-      expect(parsed.events[0].tick).toBe(10);
+      expect(parsed.result.events).toHaveLength(1);
+      expect(parsed.result.events[0].tick).toBe(10);
     });
   });
 

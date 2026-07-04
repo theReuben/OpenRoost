@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
+import { skillOutputShape } from "./saveSkill.js";
 
 export function registerRecallSkills(server: McpServer, bot: BotManager): void {
   server.registerTool(
@@ -23,6 +24,28 @@ export function registerRecallSkills(server: McpServer, bot: BotManager): void {
           .describe("Maximum number of skills to return"),
       },
       annotations: { readOnlyHint: true },
+      outputSchema: {
+        result: z.object({
+          success: z.boolean(),
+          librarySize: z.number(),
+          matches: z
+            .array(skillOutputShape.extend({ score: z.number() }))
+            .optional(),
+          skills: z
+            .array(
+              z.object({
+                name: z.string(),
+                description: z.string(),
+                tags: z.array(z.string()),
+                timesUsed: z.number(),
+                successes: z.number(),
+                failures: z.number(),
+              })
+            )
+            .optional(),
+        }),
+        urgentEvents: z.array(z.record(z.string(), z.unknown())).optional(),
+      },
     },
     async ({ query, limit }) => {
       const result = query
@@ -42,9 +65,7 @@ export function registerRecallSkills(server: McpServer, bot: BotManager): void {
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }
