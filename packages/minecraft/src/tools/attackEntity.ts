@@ -38,6 +38,39 @@ export function registerAttackEntity(server: McpServer, bot: BotManager): void {
           return toolResult(wrapped);
         }
 
+        // PvP guard: attacking a human player asks the user for confirmation
+        // via MCP elicitation — but only when the client supports it.
+        const targetUsername = (entity as any).username as string | undefined;
+        const isPlayer = entity.type === "player" || Boolean(targetUsername);
+        if (isPlayer && server.server.getClientCapabilities()?.elicitation) {
+          try {
+            const res = await server.server.elicitInput({
+              message: `The bot wants to attack player "${targetUsername ?? target}". Allow PvP?`,
+              requestedSchema: {
+                type: "object",
+                properties: {
+                  confirm: {
+                    type: "boolean",
+                    title: "Attack this player?",
+                    description: "Approve the PvP attack",
+                  },
+                },
+                required: ["confirm"],
+              },
+            });
+            if (res.action !== "accept" || res.content?.confirm !== true) {
+              const wrapped = errorResponse(
+                `PvP attack on "${targetUsername ?? target}" was not approved by the user`,
+                bot.events
+              );
+              return toolResult(wrapped);
+            }
+          } catch {
+            // Elicitation request failed despite the advertised capability —
+            // fall through and behave as before (the user asked for this attack).
+          }
+        }
+
         // Equip weapon if specified
         if (weapon) {
           const weaponItem = bot.bot.inventory.items().find(
