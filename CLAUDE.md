@@ -12,6 +12,7 @@ npm run build          # build all packages (tsc)
 npm test               # vitest, all packages — must stay green
 node scripts/create-game.mjs <name>     # scaffold a new game package
 node scripts/validate-game.mjs <name>   # conformance-check a game package
+node scripts/autopilot.mjs "<goals>"    # unattended solo play (Agent SDK loop)
 ```
 
 ## Architecture

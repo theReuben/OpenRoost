@@ -117,6 +117,26 @@ Once connected, Claude has access to 35 tools. Open a conversation and try:
 
 Claude will call `get_observation` to orient itself, use `go_to` and `mine_block` to gather resources, `craft_item` to make tools, and `send_chat` to communicate in-game.
 
+### 6. Solo play (autopilot)
+
+The bot can also play unattended — no chat client needed. The autopilot runs
+Claude in a session loop against the MCP server with standing goals:
+
+```bash
+npm run build   # autopilot runs the compiled server
+node scripts/autopilot.mjs "survive, build up a base, keep chests stocked with iron and food"
+```
+
+Each session starts fresh, but the persistent memory does the heavy lifting:
+the bot opens by reading its journal, waypoints, and skill library, works the
+goals, and winds down by writing back what the next session needs. Leave it
+running overnight and read the journal in the morning.
+
+Requires Claude Code auth (`claude` login or `ANTHROPIC_API_KEY`). Sessions
+are sandboxed to the game tools only — no filesystem, shell, or web access.
+Tuning via `AUTOPILOT_*` environment variables (sessions, turns, per-session
+budget cap) — see the header of `scripts/autopilot.mjs`.
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -280,5 +300,5 @@ and the conventions that keep game packages consistent), and
   task model — and MCP Apps for a richer in-client HUD)
 - **Second game package** to prove the core boundary (Luanti or Factorio
   are the strongest candidates)
-- **Autonomous sessions** — standing goals + the skill/task systems already
-  support unattended play; needs a driving loop on the client side
+- ~~**Autonomous sessions**~~ — done: `scripts/autopilot.mjs` drives
+  unattended play with standing goals and cross-session memory
