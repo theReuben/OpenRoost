@@ -3,6 +3,8 @@ import { pathfinder, Movements, goals } from "mineflayer-pathfinder";
 import {
   EventManager,
   TaskManager,
+  SkillLibrary,
+  GameMemory,
   ObservationSnapshot,
   BlockInfo,
   EntityInfo,
@@ -106,6 +108,12 @@ export class BotManager {
   /** Memory of container contents with decay over time. */
   containerMemory = new ContainerMemory();
 
+  /** Library of learned strategies, persisted across sessions. */
+  skills = new SkillLibrary();
+
+  /** Episodic memory: waypoints and session journal, persisted across sessions. */
+  memory = new GameMemory();
+
   /** Tick when the bot last slept in a bed. -1 means never slept. */
   lastSleepTick = -1;
   /** Whether it is currently nighttime. */
@@ -154,8 +162,10 @@ export class BotManager {
     this.deathHistory = state.deaths;
     this.lastSleepTick = state.lastSleepTick;
     this.containerMemory.importRecords(state.containers);
+    this.skills.importSkills(state.skills);
+    this.memory.importMemory({ waypoints: state.waypoints, journal: state.journal });
     console.error(
-      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths`
+      `[OpenRoost] Restored state: ${state.containers.length} containers, ${state.deaths.length} deaths, ${state.skills.length} skills, ${state.waypoints.length} waypoints, ${state.journal.length} journal entries`
     );
   }
 
@@ -165,6 +175,9 @@ export class BotManager {
       containers: this.containerMemory.exportRecords(),
       deaths: this.deathHistory,
       lastSleepTick: this.lastSleepTick,
+      skills: this.skills.exportSkills(),
+      waypoints: this.memory.exportMemory().waypoints,
+      journal: this.memory.exportMemory().journal,
       savedAt: new Date().toISOString(),
     };
     this.persistence.save(state);
@@ -191,7 +204,10 @@ export class BotManager {
         port: this.config.port,
         username: this.config.username,
         version: this.config.version,
-        hideErrors: false,
+        // minecraft-protocol prints connection errors to STDOUT when
+        // hideErrors is false, corrupting the MCP JSON-RPC stream. We log
+        // errors ourselves (to stderr) via the error/end handlers below.
+        hideErrors: true,
       });
 
       this.bot.loadPlugin(pathfinder);

@@ -1,18 +1,22 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetObservation(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_observation",
-    "Get a snapshot of current state and surroundings (position, health, nearby blocks/entities)",
-    {},
+    {
+      title: "Get Observation",
+      description:
+        "Get a snapshot of current state and surroundings (position, health, nearby blocks/entities)",
+      inputSchema:
+      {},
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       const observation = bot.getObservation();
       const wrapped = wrapResponse(observation, bot.events);
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

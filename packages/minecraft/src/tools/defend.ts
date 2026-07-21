@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const HOSTILE_MOBS = [
@@ -48,15 +48,21 @@ const HOSTILE_MOBS = [
 ];
 
 export function registerDefend(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "defend",
-    "Enter defensive mode — auto-attack hostile mobs within range. Returns a task ID for tracking.",
     {
-      radius: z.number().default(8).describe("Detection radius for hostile mobs"),
-      fleeHealthThreshold: z
-        .number()
-        .default(4)
-        .describe("Health level at which to flee instead of fight"),
+      title: "Defend",
+      description:
+        "Enter defensive mode — auto-attack hostile mobs within range. Returns a task ID for tracking.",
+      inputSchema:
+      {
+        radius: z.number().default(8).describe("Detection radius for hostile mobs"),
+        fleeHealthThreshold: z
+          .number()
+          .default(4)
+          .describe("Health level at which to flee instead of fight"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ radius, fleeHealthThreshold }) => {
       try {
@@ -128,17 +134,13 @@ export function registerDefend(server: McpServer, bot: BotManager): void {
           { success: true, taskId, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Defend failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

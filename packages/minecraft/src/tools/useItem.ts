@@ -1,25 +1,31 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerUseItem(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "use_item",
-    "Use the specified item (eat food, throw ender pearl, etc.). Optionally target a position or entity.",
     {
-      itemName: z.string().describe("Name of the item to use"),
-      target: z
-        .union([
-          z.object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
-          }),
-          z.string(),
-        ])
-        .optional()
-        .describe("Target position {x,y,z} or entity name string"),
+      title: "Use Item",
+      description:
+        "Use the specified item (eat food, throw ender pearl, etc.). Optionally target a position or entity.",
+      inputSchema:
+      {
+        itemName: z.string().describe("Name of the item to use"),
+        target: z
+          .union([
+            z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }),
+            z.string(),
+          ])
+          .optional()
+          .describe("Target position {x,y,z} or entity name string"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ itemName, target }) => {
       try {
@@ -33,9 +39,7 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
             `Item "${itemName}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Equip the item
@@ -63,9 +67,7 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
               `Target entity "${target}" not found nearby`,
               bot.events
             );
-            return {
-              content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-            };
+            return toolResult(wrapped);
           }
         } else {
           // No target — just activate the item
@@ -77,17 +79,13 @@ export function registerUseItem(server: McpServer, bot: BotManager): void {
           { success: true, itemUsed: itemName, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Use item failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

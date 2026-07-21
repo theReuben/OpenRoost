@@ -1,19 +1,25 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerSmeltItem(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "smelt_item",
-    "Place items in a nearby furnace for smelting. Returns a task ID (smelting takes time).",
     {
-      item: z.string().describe("Item to smelt"),
-      fuel: z.string().describe('Fuel to use (e.g. "coal")'),
-      count: z.number().default(1).describe("Number of items to smelt"),
-      furnaceX: z.number().describe("Furnace X coordinate"),
-      furnaceY: z.number().describe("Furnace Y coordinate"),
-      furnaceZ: z.number().describe("Furnace Z coordinate"),
+      title: "Smelt Item",
+      description:
+        "Place items in a nearby furnace for smelting. Returns a task ID (smelting takes time).",
+      inputSchema:
+      {
+        item: z.string().describe("Item to smelt"),
+        fuel: z.string().describe('Fuel to use (e.g. "coal")'),
+        count: z.number().default(1).describe("Number of items to smelt"),
+        furnaceX: z.number().describe("Furnace X coordinate"),
+        furnaceY: z.number().describe("Furnace Y coordinate"),
+        furnaceZ: z.number().describe("Furnace Z coordinate"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ item, fuel, count, furnaceX, furnaceY, furnaceZ }) => {
       try {
@@ -25,9 +31,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             "No furnace at that position",
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         let furnaceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -55,9 +59,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             `Item "${item}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         if (!fuelItem) {
@@ -66,9 +68,7 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
             `Fuel "${fuel}" not found in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Put fuel and input
@@ -118,17 +118,13 @@ export function registerSmeltItem(server: McpServer, bot: BotManager): void {
           { success: true, taskId, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Smelt failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

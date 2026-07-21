@@ -9,14 +9,14 @@ MCP servers enabling Claude to play videogames as a cooperative AI player. Start
   - Vanilla server ([download](https://www.minecraft.net/en-us/download/server))
   - [Paper](https://papermc.io/) or [Spigot](https://www.spigotmc.org/)
   - A Minecraft hosting provider
-- Server version **1.8 – 1.20.4** (Mineflayer compatibility)
+- Server version **1.8.8 – 1.21.11** (Mineflayer compatibility)
 
 ## Architecture
 
 ```
 packages/
 ├── core/        → @openroost/core — shared EventManager, TaskManager, base types
-└── minecraft/   → @openroost/minecraft — Mineflayer bot + 22 MCP tools
+└── minecraft/   → @openroost/minecraft — Mineflayer bot + 35 MCP tools
 ```
 
 ## Getting Started
@@ -35,7 +35,7 @@ npm run build
 If you don't already have one running, here's the quickest way:
 
 ```bash
-# Download the vanilla server jar (example for 1.20.4)
+# Download the vanilla server jar (example for 1.21.x)
 mkdir mc-server && cd mc-server
 # Download server.jar from https://www.minecraft.net/en-us/download/server
 java -jar server.jar --nogui
@@ -62,7 +62,7 @@ After changing `server.properties`, restart the server.
 npm start -w packages/minecraft
 
 # Custom settings via environment variables
-MC_HOST=192.168.1.50 MC_PORT=25565 MC_USERNAME=MyBot MC_VERSION=1.20.4 npm start -w packages/minecraft
+MC_HOST=192.168.1.50 MC_PORT=25565 MC_USERNAME=MyBot MC_VERSION=1.21.4 npm start -w packages/minecraft
 ```
 
 ### 4. Configure Claude
@@ -109,13 +109,33 @@ Add to your `.mcp.json` in the project root or `~/.claude/mcp.json` globally:
 
 ### 5. Play
 
-Once connected, Claude has access to 22 tools. Open a conversation and try:
+Once connected, Claude has access to 35 tools. Open a conversation and try:
 
 > "Look around and tell me what you see."
 > "Follow me and help me mine some iron."
 > "Build a small shelter before nightfall."
 
 Claude will call `get_observation` to orient itself, use `go_to` and `mine_block` to gather resources, `craft_item` to make tools, and `send_chat` to communicate in-game.
+
+### 6. Solo play (autopilot)
+
+The bot can also play unattended — no chat client needed. The autopilot runs
+Claude in a session loop against the MCP server with standing goals:
+
+```bash
+npm run build   # autopilot runs the compiled server
+node scripts/autopilot.mjs "survive, build up a base, keep chests stocked with iron and food"
+```
+
+Each session starts fresh, but the persistent memory does the heavy lifting:
+the bot opens by reading its journal, waypoints, and skill library, works the
+goals, and winds down by writing back what the next session needs. Leave it
+running overnight and read the journal in the morning.
+
+Requires Claude Code auth (`claude` login or `ANTHROPIC_API_KEY`). Sessions
+are sandboxed to the game tools only — no filesystem, shell, or web access.
+Tuning via `AUTOPILOT_*` environment variables (sessions, turns, per-session
+budget cap) — see the header of `scripts/autopilot.mjs`.
 
 ## Environment Variables
 
@@ -124,7 +144,7 @@ Claude will call `get_observation` to orient itself, use `go_to` and `mine_block
 | `MC_HOST` | `127.0.0.1` | Minecraft server hostname or IP |
 | `MC_PORT` | `25565` | Minecraft server port |
 | `MC_USERNAME` | `ClaudeBot` | Bot's in-game username |
-| `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.20.4`) |
+| `MC_VERSION` | auto-detect | Force a specific Minecraft version (e.g. `1.21.4`) |
 
 ## Development
 
@@ -136,7 +156,7 @@ npm run build
 npm run build:core
 npm run build:minecraft
 
-# Run tests (90 tests across core + minecraft)
+# Run tests (193 tests across core + minecraft)
 npm test
 
 # Watch mode for development
@@ -156,7 +176,8 @@ npm run clean
 | `look_at` | Look in a direction/position, describe what's visible |
 | `scan_area` | Scan larger area for specific block types |
 | `get_recipe` | Look up crafting recipes via minecraft-data |
-| `get_events` | Retrieve recent events (damage, chat, deaths) |
+| `get_events` | Retrieve recent events (damage, chat, deaths, sounds) |
+| `get_time_weather` | Time of day, weather, moon phase, phantom risk |
 
 ### Layer 2 — Movement & Navigation
 | Tool | Description |
@@ -200,6 +221,30 @@ npm run clean
 | `get_task_status` | Poll async task progress |
 | `cancel_task` | Cancel any running async task |
 | `get_death_history` | Recent death locations for item recovery |
+| `recall_containers` | Remember contents of chests opened before (decays over time) |
+| `sleep` | Sleep in a nearby bed to skip night and reset the phantom timer |
+
+### Layer 8 — Learning (Voyager-style skill library)
+| Tool | Description |
+|------|-------------|
+| `save_skill` | Record a strategy that worked (or failed) with tags and outcome |
+| `recall_skills` | Retrieve relevant learned strategies before starting a task |
+
+Skills persist across sessions in `openroost-state.json`. Each save records a
+success/failure outcome, so strategies that keep working rank above ones that
+don't — the bot genuinely gets better the more you play with it.
+
+### Layer 9 — Episodic Memory & Attentive Idling
+| Tool | Description |
+|------|-------------|
+| `save_waypoint` | Remember a named place (defaults to current position); persists across sessions |
+| `list_waypoints` | All saved places, sorted by distance from the bot |
+| `write_journal` | Record the current project/agreements for future sessions |
+| `read_journal` | Catch up on what past sessions were doing |
+| `wait_for_events` | Block until something urgent happens (chat, damage, threat) — attentive idling without polling |
+
+`go_to` accepts waypoint names (`waypoint: "home"`), so "go home" works the
+way you'd hope.
 
 ## Troubleshooting
 
@@ -213,7 +258,7 @@ The bot can't reach the Minecraft server. Check that:
 Set `online-mode=false` in your `server.properties` and restart the server. The bot connects in offline/cracked mode since it doesn't have a Minecraft account.
 
 ### "Version mismatch" or the bot connects but immediately disconnects
-Set the `MC_VERSION` environment variable to match your server's exact version (e.g. `MC_VERSION=1.20.4`). Run `/version` on the server console to check.
+Set the `MC_VERSION` environment variable to match your server's exact version (e.g. `MC_VERSION=1.21.4`). Run `/version` on the server console to check.
 
 ### Bot connects but doesn't respond to tools
 Make sure you built after installing: `npm run build`. The MCP server runs the compiled JavaScript from `build/`, not the TypeScript source.
@@ -227,13 +272,33 @@ Use `stop_movement` to cancel navigation, or `cancel_task` with the task ID. Com
 - **Observation snapshots** — every action returns updated world state
 - **Async task model** — long actions return task IDs, not blocking calls
 - **Right-sized granularity** — tools are intentional actions ("mine this block"), not input events ("press left click") or high-level goals ("build a house")
-- **Game-agnostic core** — EventManager and TaskManager are generic; adding a new game means adding a new package, not modifying core
+- **Game-agnostic core** — EventManager, TaskManager, SkillLibrary, and JsonStore are generic; adding a new game means adding a new package, not modifying core
+- **Learning across sessions** — the skill library persists strategies with outcomes, so the agent improves the more it plays
+- **Structured output everywhere** — every tool emits MCP structuredContent alongside text, so typed clients skip JSON re-parsing
 
 ## Adding a New Game
 
-1. Create `packages/<game>/` with its own `package.json` depending on `@openroost/core`
-2. Implement a game-specific bot manager using core's EventManager and TaskManager
-3. Register MCP tools in a `tools/` directory
-4. Wire up in `src/index.ts` with `McpServer` + `StdioServerTransport`
+```bash
+node scripts/create-game.mjs <game-name>   # e.g. factorio
+npm install && npm run build
+```
 
-See `packages/minecraft/` as the reference implementation.
+The scaffolder generates a compiling, bootable MCP server wired to core's
+event, task, skill, and persistence systems — including working
+`save_skill`/`recall_skills` tools, so the agent learns your game from day
+one. Then implement the game connection and add perception/action tools.
+
+See **[docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md)** for the full guide
+(integration routes for Luanti, Factorio, Terraria, Stardew Valley, Screeps,
+and the conventions that keep game packages consistent), and
+`packages/minecraft/` as the reference implementation.
+
+## Roadmap
+
+- **MCP SDK v2** once it ships as stable alongside the 2026-07-28 spec
+  (extensions framework, MCP Tasks — a natural fit for OpenRoost's async
+  task model — and MCP Apps for a richer in-client HUD)
+- **Second game package** to prove the core boundary (Luanti or Factorio
+  are the strongest candidates)
+- ~~**Autonomous sessions**~~ — done: `scripts/autopilot.mjs` drives
+  unattended play with standing goals and cross-session memory

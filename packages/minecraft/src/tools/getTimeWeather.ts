@@ -1,13 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 import { getTimePhase, getMoonPhase } from "../timeUtils.js";
 
 export function registerGetTimeWeather(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_time_weather",
-    "Get current time of day, weather, moon phase, and sleep status. Check this before deciding whether to explore, build, or seek shelter. Warns about phantom risk if you haven't slept in 3+ nights.",
-    {},
+    {
+      title: "Get Time & Weather",
+      description:
+        "Get current time of day, weather, moon phase, and sleep status. Check this before deciding whether to explore, build, or seek shelter. Warns about phantom risk if you haven't slept in 3+ nights.",
+      inputSchema:
+      {},
+      annotations: { readOnlyHint: true },
+    },
     async () => {
       const time = bot.bot.time;
       const timeOfDay = time.timeOfDay;
@@ -48,9 +54,7 @@ export function registerGetTimeWeather(server: McpServer, bot: BotManager): void
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

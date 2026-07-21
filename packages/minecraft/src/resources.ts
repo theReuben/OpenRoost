@@ -8,7 +8,7 @@ import { getTimePhase } from "./timeUtils.js";
  */
 export function registerResources(server: McpServer, bot: BotManager): void {
   // ── minecraft://status ──
-  server.resource(
+  server.registerResource(
     "Bot Status",
     "minecraft://status",
     { description: "Bot connection status, game mode, and difficulty" },
@@ -24,7 +24,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://inventory ──
-  server.resource(
+  server.registerResource(
     "Inventory",
     "minecraft://inventory",
     { description: "Current inventory contents, armor, and held item (subscribable)" },
@@ -40,7 +40,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://position ──
-  server.resource(
+  server.registerResource(
     "Position",
     "minecraft://position",
     { description: "Current coordinates and facing direction" },
@@ -56,7 +56,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://nearby-players ──
-  server.resource(
+  server.registerResource(
     "Nearby Players",
     "minecraft://nearby-players",
     { description: "List of online players with positions" },
@@ -72,7 +72,7 @@ export function registerResources(server: McpServer, bot: BotManager): void {
   );
 
   // ── minecraft://time-weather ──
-  server.resource(
+  server.registerResource(
     "Time & Weather",
     "minecraft://time-weather",
     { description: "Current time of day, weather, moon phase, and sleep/phantom status (subscribable)" },
@@ -87,8 +87,51 @@ export function registerResources(server: McpServer, bot: BotManager): void {
     })
   );
 
+  // ── minecraft://skills ──
+  server.registerResource(
+    "Learned Skills",
+    "minecraft://skills",
+    { description: "Persistent library of strategies learned in past sessions" },
+    async () => ({
+      contents: [
+        {
+          uri: "minecraft://skills",
+          mimeType: "application/json",
+          text: JSON.stringify(
+            { count: bot.skills.size, skills: bot.skills.list() },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
+  // ── minecraft://memory ──
+  server.registerResource(
+    "Episodic Memory",
+    "minecraft://memory",
+    { description: "Saved waypoints and session journal from this and past sessions" },
+    async () => ({
+      contents: [
+        {
+          uri: "minecraft://memory",
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              waypoints: bot.memory.listWaypoints(),
+              journal: bot.memory.recentJournal(20),
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    })
+  );
+
   // ── minecraft://events ──
-  server.resource(
+  server.registerResource(
     "Recent Events",
     "minecraft://events",
     { description: "Recent game events (damage, chat, deaths, etc.)" },

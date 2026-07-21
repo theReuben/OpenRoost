@@ -1,18 +1,24 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, BlockInfo } from "@openroost/core";
+import { wrapResponse, errorResponse, BlockInfo, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerScanArea(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "scan_area",
-    "Scan a larger area for visible block types (blocks must have an exposed face — no x-ray vision).",
     {
-      radius: z.number().min(4).max(32).describe("Scan radius (4-32 blocks)"),
-      blockTypes: z
-        .array(z.string())
-        .optional()
-        .describe("Optional list of block names to filter for"),
+      title: "Scan Area",
+      description:
+        "Scan a larger area for visible block types (blocks must have an exposed face — no x-ray vision).",
+      inputSchema:
+      {
+        radius: z.number().min(4).max(32).describe("Scan radius (4-32 blocks)"),
+        blockTypes: z
+          .array(z.string())
+          .optional()
+          .describe("Optional list of block names to filter for"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ radius, blockTypes }) => {
       try {
@@ -77,17 +83,13 @@ export function registerScanArea(server: McpServer, bot: BotManager): void {
         const summary = `Found ${blocks.length} visible blocks in radius ${radius}. ${summaryParts.join(", ")}`;
 
         const wrapped = wrapResponse({ blocks, summary }, bot.events);
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Scan failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

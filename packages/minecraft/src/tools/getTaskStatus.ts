@@ -1,14 +1,20 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetTaskStatus(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_task_status",
-    "Check the status of an async task (pathfinding, combat, smelting, etc.)",
     {
-      taskId: z.string().describe("Task ID from a previous action"),
+      title: "Get Task Status",
+      description:
+        "Check the status of an async task (pathfinding, combat, smelting, etc.)",
+      inputSchema:
+      {
+        taskId: z.string().describe("Task ID from a previous action"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ taskId }) => {
       const task = bot.tasks.get(taskId);
@@ -17,9 +23,7 @@ export function registerGetTaskStatus(server: McpServer, bot: BotManager): void 
           { error: `No task found with ID: ${taskId}` },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
 
       const wrapped = wrapResponse(
@@ -31,9 +35,7 @@ export function registerGetTaskStatus(server: McpServer, bot: BotManager): void 
         },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

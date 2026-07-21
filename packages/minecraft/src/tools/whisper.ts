@@ -1,15 +1,21 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerWhisper(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "whisper",
-    "Send a private message to a specific player via /msg.",
     {
-      playerName: z.string().describe("Recipient player name"),
-      message: z.string().describe("Message content"),
+      title: "Whisper",
+      description:
+        "Send a private message to a specific player via /msg.",
+      inputSchema:
+      {
+        playerName: z.string().describe("Recipient player name"),
+        message: z.string().describe("Message content"),
+      },
+      annotations: { destructiveHint: false, openWorldHint: true },
     },
     async ({ playerName, message }) => {
       bot.bot.chat(`/msg ${playerName} ${message}`);
@@ -18,9 +24,7 @@ export function registerWhisper(server: McpServer, bot: BotManager): void {
         { success: true, observation },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

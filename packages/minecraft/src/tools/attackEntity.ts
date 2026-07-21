@@ -1,16 +1,22 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerAttackEntity(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "attack_entity",
-    "Attack a specific entity (mob, animal, or player). Returns a task ID for tracking.",
     {
-      target: z.string().describe("Entity name or type to attack"),
-      weapon: z.string().optional().describe("Weapon to equip before attacking"),
-      pursuit: z.boolean().default(true).describe("Whether to chase the target if it moves"),
+      title: "Attack Entity",
+      description:
+        "Attack a specific entity (mob, animal, or player). Returns a task ID for tracking.",
+      inputSchema:
+      {
+        target: z.string().describe("Entity name or type to attack"),
+        weapon: z.string().optional().describe("Weapon to equip before attacking"),
+        pursuit: z.boolean().default(true).describe("Whether to chase the target if it moves"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ target, weapon, pursuit }) => {
       try {
@@ -29,9 +35,40 @@ export function registerAttackEntity(server: McpServer, bot: BotManager): void {
             `No entity matching "${target}" found nearby`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
+        }
+
+        // PvP guard: attacking a human player asks the user for confirmation
+        // via MCP elicitation — but only when the client supports it.
+        const targetUsername = (entity as any).username as string | undefined;
+        const isPlayer = entity.type === "player" || Boolean(targetUsername);
+        if (isPlayer && server.server.getClientCapabilities()?.elicitation) {
+          try {
+            const res = await server.server.elicitInput({
+              message: `The bot wants to attack player "${targetUsername ?? target}". Allow PvP?`,
+              requestedSchema: {
+                type: "object",
+                properties: {
+                  confirm: {
+                    type: "boolean",
+                    title: "Attack this player?",
+                    description: "Approve the PvP attack",
+                  },
+                },
+                required: ["confirm"],
+              },
+            });
+            if (res.action !== "accept" || res.content?.confirm !== true) {
+              const wrapped = errorResponse(
+                `PvP attack on "${targetUsername ?? target}" was not approved by the user`,
+                bot.events
+              );
+              return toolResult(wrapped);
+            }
+          } catch {
+            // Elicitation request failed despite the advertised capability —
+            // fall through and behave as before (the user asked for this attack).
+          }
         }
 
         // Equip weapon if specified
@@ -92,17 +129,13 @@ export function registerAttackEntity(server: McpServer, bot: BotManager): void {
           { success: true, taskId, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Attack failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

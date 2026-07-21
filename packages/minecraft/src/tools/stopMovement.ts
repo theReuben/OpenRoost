@@ -1,12 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse } from "@openroost/core";
+import { wrapResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerStopMovement(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "stop_movement",
-    "Cancel any active movement or following task.",
-    {},
+    {
+      title: "Stop Movement",
+      description:
+        "Cancel any active movement or following task.",
+      inputSchema:
+      {},
+      annotations: { destructiveHint: false, idempotentHint: true },
+    },
     async () => {
       bot.bot.pathfinder.setGoal(null as any);
       const observation = bot.getObservation();
@@ -14,9 +20,7 @@ export function registerStopMovement(server: McpServer, bot: BotManager): void {
         { success: true, observation },
         bot.events
       );
-      return {
-        content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-      };
+      return toolResult(wrapped);
     }
   );
 }

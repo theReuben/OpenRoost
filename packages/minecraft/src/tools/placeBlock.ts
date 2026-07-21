@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const FACE_VECTORS: Record<string, { x: number; y: number; z: number }> = {
@@ -13,18 +13,24 @@ const FACE_VECTORS: Record<string, { x: number; y: number; z: number }> = {
 };
 
 export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "place_block",
-    "Place a block from inventory at a position.",
     {
-      blockName: z.string().describe("Name of the block to place"),
-      x: z.number().describe("Target X coordinate"),
-      y: z.number().describe("Target Y coordinate"),
-      z: z.number().describe("Target Z coordinate"),
-      face: z
-        .enum(["top", "bottom", "north", "south", "east", "west"])
-        .default("top")
-        .describe("Which face of the adjacent block to place against"),
+      title: "Place Block",
+      description:
+        "Place a block from inventory at a position.",
+      inputSchema:
+      {
+        blockName: z.string().describe("Name of the block to place"),
+        x: z.number().describe("Target X coordinate"),
+        y: z.number().describe("Target Y coordinate"),
+        z: z.number().describe("Target Z coordinate"),
+        face: z
+          .enum(["top", "bottom", "north", "south", "east", "west"])
+          .default("top")
+          .describe("Which face of the adjacent block to place against"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ blockName, x, y, z: zCoord, face }) => {
       try {
@@ -37,9 +43,7 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
             `No ${blockName} in inventory`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Equip the block
@@ -56,9 +60,7 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
             `No solid reference block at ${referencePos.x}, ${referencePos.y}, ${referencePos.z} to place against`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const faceVector = new Vec3(fv.x, fv.y, fv.z);
@@ -82,17 +84,13 @@ export function registerPlaceBlock(server: McpServer, bot: BotManager): void {
           { success: true, placed: blockName, position: { x, y, z: zCoord }, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Block placement failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

@@ -1,14 +1,20 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse } from "@openroost/core";
+import { wrapResponse, errorResponse, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerGetPlayerInfo(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "get_player_info",
-    "Get information about a specific online player.",
     {
-      playerName: z.string().describe("Player to look up"),
+      title: "Get Player Info",
+      description:
+        "Get information about a specific online player.",
+      inputSchema:
+      {
+        playerName: z.string().describe("Player to look up"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ playerName }) => {
       try {
@@ -18,9 +24,7 @@ export function registerGetPlayerInfo(server: McpServer, bot: BotManager): void 
             { online: false },
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const result: Record<string, unknown> = {
@@ -44,17 +48,13 @@ export function registerGetPlayerInfo(server: McpServer, bot: BotManager): void 
         }
 
         const wrapped = wrapResponse(result, bot.events);
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Player info failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

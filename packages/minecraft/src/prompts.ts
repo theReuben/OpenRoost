@@ -52,6 +52,23 @@ Never act blind. Call get_observation before making decisions.
 - Tell the player what you're doing via send_chat
 - Use whisper for private messages, get_player_info for teammate details
 
+### Learning (skill library)
+- Before any non-trivial task, call recall_skills with a short task description — a past session may already know the best approach
+- After completing (or failing) a non-trivial task, call save_skill with what you learned: the strategy that worked, or a note on what went wrong
+- Reuse skill names when refining a strategy — outcomes accumulate into a success rate that ranks proven skills higher
+- Skills persist across sessions; this is how you get better over time
+
+### Memory (waypoints & journal)
+- At session start: read_journal and list_waypoints to pick up where you left off
+- save_waypoint at every important place — home, mine entrance, farms, the player's build. Coordinates default to where you stand
+- go_to accepts waypoint names: go_to with waypoint="home"
+- write_journal whenever the situation changes meaningfully (new project, agreement with a player, base progress) — your future self starts with zero context
+
+### Idling (wait_for_events)
+- When you have nothing to do but should stay responsive (accompanying a player, guarding), call wait_for_events instead of polling — it blocks until something urgent happens (chat, damage, threat) or times out
+- After it returns: react to urgentEvents if any, otherwise re-assess and either act or wait again
+- Don't wait_for_events while an async task of yours needs monitoring — poll get_task_status instead
+
 ### Resource Streams
 - Subscribe to minecraft://time-weather for automatic day/night and weather updates
 - Subscribe to minecraft://inventory for slot change notifications
@@ -73,6 +90,8 @@ Never act blind. Call get_observation before making decisions.
 
 ## Avoid
 
+- Starting complex tasks without checking recall_skills first
+- Finishing a hard-won task without saving what you learned
 - Acting without observing
 - Ignoring health/food/phantom timer
 - Mining without proper tools
@@ -85,9 +104,13 @@ Never act blind. Call get_observation before making decisions.
  * Register MCP prompts the client can invoke to get gameplay context.
  */
 export function registerPrompts(server: McpServer): void {
-  server.prompt(
+  server.registerPrompt(
     "gameplay-guide",
-    "System prompt for cooperative Minecraft gameplay — teaches Claude how to use tools effectively, survive, and cooperate with players",
+    {
+      title: "Gameplay Guide",
+      description:
+        "System prompt for cooperative Minecraft gameplay — teaches Claude how to use tools effectively, survive, and cooperate with players",
+    },
     () => ({
       messages: [
         {

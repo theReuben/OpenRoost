@@ -1,16 +1,22 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
+import { wrapResponse, errorResponse, ItemStack, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerInteractBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "interact_block",
-    "Interact with a block (open chest, press button, use furnace, open door).",
     {
-      x: z.number().describe("Block X coordinate"),
-      y: z.number().describe("Block Y coordinate"),
-      z: z.number().describe("Block Z coordinate"),
+      title: "Interact With Block",
+      description:
+        "Interact with a block (open chest, press button, use furnace, open door).",
+      inputSchema:
+      {
+        x: z.number().describe("Block X coordinate"),
+        y: z.number().describe("Block Y coordinate"),
+        z: z.number().describe("Block Z coordinate"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ x, y, z: zCoord }) => {
       try {
@@ -19,9 +25,7 @@ export function registerInteractBlock(server: McpServer, bot: BotManager): void 
 
         if (!block || block.name === "air") {
           const wrapped = errorResponse("No block at that position", bot.events);
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         let activateTimer: ReturnType<typeof setTimeout> | undefined;
@@ -70,17 +74,13 @@ export function registerInteractBlock(server: McpServer, bot: BotManager): void 
         }
 
         const wrapped = wrapResponse(result, bot.events);
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Interact failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

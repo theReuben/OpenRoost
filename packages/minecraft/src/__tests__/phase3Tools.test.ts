@@ -35,12 +35,23 @@ const mockItems: ItemStack[] = [
 // --- Helpers ---
 type ToolHandler = (args: any) => Promise<any>;
 
-function createMockServer() {
+function createMockServer(opts: {
+  elicitation?: boolean;
+  elicitResult?: { action: string; content?: Record<string, unknown> };
+} = {}) {
   const handlers = new Map<string, ToolHandler>();
   return {
-    tool: vi.fn((name: string, _desc: string, _schema: any, handler: ToolHandler) => {
+    registerTool: vi.fn((name: string, _config: any, handler: ToolHandler) => {
       handlers.set(name, handler);
     }),
+    server: {
+      getClientCapabilities: vi.fn(() =>
+        opts.elicitation ? { elicitation: {} } : {}
+      ),
+      elicitInput: vi.fn(async () =>
+        opts.elicitResult ?? { action: "accept", content: { confirm: true } }
+      ),
+    },
     getHandler(name: string): ToolHandler {
       const h = handlers.get(name);
       if (!h) throw new Error(`No handler registered for ${name}`);
@@ -207,6 +218,42 @@ describe("Phase 3 Combat Tools", () => {
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.result.success).toBe(true);
       expect(parsed.result.taskId).toBeDefined();
+    });
+
+    it("asks for confirmation before attacking a player when the client supports elicitation", async () => {
+      const elicitServer = createMockServer({
+        elicitation: true,
+        elicitResult: { action: "accept", content: { confirm: true } },
+      });
+      registerAttackEntity(elicitServer as any, bot);
+      const handler = elicitServer.getHandler("attack_entity");
+      const result = await handler({ target: "Steve", pursuit: true });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(elicitServer.server.elicitInput).toHaveBeenCalledOnce();
+      expect(parsed.result.success).toBe(true);
+    });
+
+    it("refuses PvP when the user declines the elicitation", async () => {
+      const elicitServer = createMockServer({
+        elicitation: true,
+        elicitResult: { action: "decline" },
+      });
+      registerAttackEntity(elicitServer as any, bot);
+      const handler = elicitServer.getHandler("attack_entity");
+      const result = await handler({ target: "Steve", pursuit: true });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.result.success).toBe(false);
+      expect(parsed.result.error).toContain("not approved");
+    });
+
+    it("does not elicit for mob targets", async () => {
+      const elicitServer = createMockServer({ elicitation: true });
+      registerAttackEntity(elicitServer as any, bot);
+      const handler = elicitServer.getHandler("attack_entity");
+      const result = await handler({ target: "zombie", pursuit: true });
+      const parsed = JSON.parse(result.content[0].text);
+      expect(elicitServer.server.elicitInput).not.toHaveBeenCalled();
+      expect(parsed.result.success).toBe(true);
     });
   });
 

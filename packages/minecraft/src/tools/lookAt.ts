@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, BlockInfo, EntityInfo } from "@openroost/core";
+import { wrapResponse, errorResponse, BlockInfo, EntityInfo, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 const DIRECTION_VECTORS: Record<string, { x: number; y: number; z: number }> = {
@@ -29,20 +29,26 @@ interface DistanceLayer {
 }
 
 export function registerLookAt(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "look_at",
-    "Look in a direction or at a position. Returns what's directly ahead (ray-cast), blocks and entities in the view cone grouped by distance, and a natural language summary.",
     {
-      target: z
-        .union([
-          z.object({
-            x: z.number(),
-            y: z.number(),
-            z: z.number(),
-          }),
-          z.enum(["north", "south", "east", "west", "up", "down"]),
-        ])
-        .describe("Position {x,y,z} or cardinal direction to look at"),
+      title: "Look At",
+      description:
+        "Look in a direction or at a position. Returns what's directly ahead (ray-cast), blocks and entities in the view cone grouped by distance, and a natural language summary.",
+      inputSchema:
+      {
+        target: z
+          .union([
+            z.object({
+              x: z.number(),
+              y: z.number(),
+              z: z.number(),
+            }),
+            z.enum(["north", "south", "east", "west", "up", "down"]),
+          ])
+          .describe("Position {x,y,z} or cardinal direction to look at"),
+      },
+      annotations: { readOnlyHint: true },
     },
     async ({ target }) => {
       try {
@@ -100,17 +106,13 @@ export function registerLookAt(server: McpServer, bot: BotManager): void {
           },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Look failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

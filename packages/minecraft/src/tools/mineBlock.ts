@@ -1,16 +1,22 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
+import { wrapResponse, errorResponse, ItemStack, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerMineBlock(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "mine_block",
-    "Mine/break the block at a specific position. Auto-selects the best tool from inventory.",
     {
-      x: z.number().describe("Block X coordinate"),
-      y: z.number().describe("Block Y coordinate"),
-      z: z.number().describe("Block Z coordinate"),
+      title: "Mine Block",
+      description:
+        "Mine/break the block at a specific position. Auto-selects the best tool from inventory.",
+      inputSchema:
+      {
+        x: z.number().describe("Block X coordinate"),
+        y: z.number().describe("Block Y coordinate"),
+        z: z.number().describe("Block Z coordinate"),
+      },
+      annotations: { destructiveHint: true },
     },
     async ({ x, y, z: zCoord }) => {
       try {
@@ -18,9 +24,7 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
         const block = bot.bot.blockAt(new Vec3(x, y, zCoord));
         if (!block || block.name === "air") {
           const wrapped = errorResponse("No block at that position", bot.events);
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         const blockName = block.name;
@@ -33,9 +37,7 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
             `Block ${blockName} at (${x}, ${y}, ${zCoord}) is ${Math.round(reach * 10) / 10} blocks away — move closer before mining (max reach: 4.5 blocks)`,
             bot.events
           );
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Auto-equip best tool for the block
@@ -84,17 +86,13 @@ export function registerMineBlock(server: McpServer, bot: BotManager): void {
           },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Mining failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

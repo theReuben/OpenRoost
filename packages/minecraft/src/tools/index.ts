@@ -28,6 +28,12 @@ import { registerGetDeathHistory } from "./getDeathHistory.js";
 import { registerRecallContainers } from "./recallContainers.js";
 import { registerGetTimeWeather } from "./getTimeWeather.js";
 import { registerSleep } from "./sleep.js";
+import { registerSaveSkill } from "./saveSkill.js";
+import { registerRecallSkills } from "./recallSkills.js";
+import { registerWaitForEvents } from "./waitForEvents.js";
+import { registerSaveWaypoint } from "./saveWaypoint.js";
+import { registerListWaypoints } from "./listWaypoints.js";
+import { registerWriteJournal, registerReadJournal } from "./journal.js";
 
 /**
  * Register all MCP tools on the server.
@@ -72,4 +78,15 @@ export function registerAllTools(server: McpServer, bot: BotManager): void {
   registerRecallContainers(server, bot);
   registerGetTimeWeather(server, bot);
   registerSleep(server, bot);
+
+  // Phase 7 — Learning (Voyager-style skill library)
+  registerSaveSkill(server, bot);
+  registerRecallSkills(server, bot);
+
+  // Phase 8 — Episodic memory & attentive idling
+  registerWaitForEvents(server, bot);
+  registerSaveWaypoint(server, bot);
+  registerListWaypoints(server, bot);
+  registerWriteJournal(server, bot);
+  registerReadJournal(server, bot);
 }

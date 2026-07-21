@@ -1,23 +1,29 @@
 import { z } from "zod";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { wrapResponse, errorResponse, ItemStack } from "@openroost/core";
+import { wrapResponse, errorResponse, ItemStack, toolResult } from "@openroost/core";
 import { BotManager } from "../BotManager.js";
 
 export function registerTransferItems(server: McpServer, bot: BotManager): void {
-  server.tool(
+  server.registerTool(
     "transfer_items",
-    "Move items between inventory and a container (chest, furnace, etc.).",
     {
-      containerX: z.number().describe("Container block X coordinate"),
-      containerY: z.number().describe("Container block Y coordinate"),
-      containerZ: z.number().describe("Container block Z coordinate"),
-      items: z.array(
-        z.object({
-          name: z.string().describe("Item name"),
-          count: z.number().describe("Number to transfer"),
-        })
-      ).describe("Items to transfer"),
-      direction: z.enum(["deposit", "withdraw"]).describe("Direction of transfer"),
+      title: "Transfer Items",
+      description:
+        "Move items between inventory and a container (chest, furnace, etc.).",
+      inputSchema:
+      {
+        containerX: z.number().describe("Container block X coordinate"),
+        containerY: z.number().describe("Container block Y coordinate"),
+        containerZ: z.number().describe("Container block Z coordinate"),
+        items: z.array(
+          z.object({
+            name: z.string().describe("Item name"),
+            count: z.number().describe("Number to transfer"),
+          })
+        ).describe("Items to transfer"),
+        direction: z.enum(["deposit", "withdraw"]).describe("Direction of transfer"),
+      },
+      annotations: { destructiveHint: false },
     },
     async ({ containerX, containerY, containerZ, items, direction }) => {
       try {
@@ -26,9 +32,7 @@ export function registerTransferItems(server: McpServer, bot: BotManager): void 
 
         if (!block || block.name === "air") {
           const wrapped = errorResponse("No block at that position", bot.events);
-          return {
-            content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-          };
+          return toolResult(wrapped);
         }
 
         // Open the container
@@ -79,17 +83,13 @@ export function registerTransferItems(server: McpServer, bot: BotManager): void 
           { success: true, transferred, observation },
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       } catch (err) {
         const wrapped = errorResponse(
           `Transfer failed: ${err instanceof Error ? err.message : String(err)}`,
           bot.events
         );
-        return {
-          content: [{ type: "text", text: JSON.stringify(wrapped, null, 2) }],
-        };
+        return toolResult(wrapped);
       }
     }
   );

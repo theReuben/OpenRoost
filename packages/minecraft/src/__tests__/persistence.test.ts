@@ -55,6 +55,32 @@ describe("Persistence", () => {
         },
       ],
       lastSleepTick: 48000,
+      skills: [
+        {
+          name: "branch-mine-diamonds",
+          description: "Diamond mining at y=-58",
+          strategy: "Trunk corridor, branches every 3 blocks",
+          tags: ["mining"],
+          timesUsed: 2,
+          successes: 2,
+          failures: 0,
+          notes: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      waypoints: [
+        {
+          name: "home",
+          position: { x: 0, y: 64, z: 0 },
+          note: "main base",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      journal: [
+        { text: "started a castle", tags: ["project"], timestamp: new Date().toISOString() },
+      ],
       savedAt: new Date().toISOString(),
     };
 
@@ -67,6 +93,11 @@ describe("Persistence", () => {
     expect(loaded.deaths).toHaveLength(1);
     expect(loaded.deaths[0].position.x).toBe(100);
     expect(loaded.lastSleepTick).toBe(48000);
+    expect(loaded.skills).toHaveLength(1);
+    expect(loaded.skills[0].name).toBe("branch-mine-diamonds");
+    expect(loaded.waypoints).toHaveLength(1);
+    expect(loaded.waypoints[0].name).toBe("home");
+    expect(loaded.journal).toHaveLength(1);
   });
 
   it("handles corrupt file gracefully", () => {
